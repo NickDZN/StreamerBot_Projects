@@ -8,48 +8,42 @@ public class CPHInline{
         const string gv_sbstartupaps = "SBCONFIG_STARTUP_APPS";
 
         try {
-            // Retrieve the comma-separated applications and paths from the arguments
-            string applicationPaths = args.ContainsKey("paths") ? args["paths"]?.ToString() : string.Empty;
 
-            // Split the input strings into arrays
-            string[] appsList = applications.Split(',');
-            string[] appPathList = applicationPaths.Split(',');
+		    List<String> applicationsToRun = new List<string>{}; 
 
-            // Check if both lists have the same number of items
-            if (appsList.Length != appPathList.Length) return Log(logMessage: "The number of applications and paths do not match.", logLevel: 0, halting: 1);
-
-            // Create a dictionary to store application name and path pairs
-            Dictionary<string, string> applicationDictionary = new Dictionary<string, string>();
-
-            // Populate the dictionary with app name as key and app path as value
-            for (int i = 0; i < appsList.Length; i++) {
-                string appName = appsList[i].Trim(); 
-                string appPath = appPathList[i].Trim(); 
-
-                // Check if the appName or appPath is empty
-                if (string.IsNullOrEmpty(appName) || string.IsNullOrEmpty(appPath)) return Log(logMessage: "Invalid entry at index {i}: App name or path is empty.", logLevel: 0, halting: 1);
-
-                // Add the app name and path to the dictionary
-                applicationDictionary[appName] = appPath;
+		    // your main code goes here
+		    foreach (var kvp in args) {
+		    	string keyValue = kvp.Key;	
+                
+		    	if (keyValue.StartsWith("startup_application", StringComparison.OrdinalIgnoreCase)) {
+                    Log(logMessage: $"Processing {keyValue}", logLevel: 3);                	
+		    		string pathToAdd = args[keyValue].ToString();
+		    		
+                    // If the path is not null or empty, add it to the list
+                    if (!string.IsNullOrEmpty(pathToAdd)) {
+                        applicationsToRun.Add(pathToAdd);
+                        Log(logMessage: $"Adding {pathToAdd}", logLevel: 3);
+                    } else {
+                        Log(logMessage: $"Invalid path for {keyValue}.", logLevel: 0);
+                    }
+		    	}				
             }
+        
+            if (applicationsToRun.Count == 0) {
+                return Log(logMessage: "No valid startup applications found.", logLevel: 0, halting: 1);
+            }        
 
-            // Serialize the dictionary to a JSON string
-            string applicationDictionaryJson;
-            try {
-                applicationDictionaryJson = JsonConvert.SerializeObject(applicationDictionary);
-            } catch (Exception ex) {
-                return Log(logMessage: $"Failed to serialize the dictionary to JSON. Error: {ex.Message}", logLevel: 0, halting: 1);
-            }
+            string applicationListCSV = string.Join(",", applicationsToRun);
 
             // Store the JSON string as a global variable
             try {
-                CPH.SetGlobalVar(gv_sbstartupaps, applicationDictionaryJson, true);
+                CPH.SetGlobalVar(gv_sbstartupaps, applicationListCSV, true);
             } catch (Exception ex) {
                 return Log(logMessage: $"Failed to set the global variable. Error: {ex.Message}", logLevel: 0, halting: 1);
             }
 
             // Log the successful creation of the global variable
-            return Log(logMessage: $"Applications dictionary stored as a global variable with {applicationDictionary.Count} entries", logLevel: 2);
+            return Log(logMessage: $"Applications dictionary stored as a global variable with {applicationsToRun.Count} entries", logLevel: 2);
         } catch (Exception ex) {
             // Log any unexpected errors that occur
             CPH.LogError($"An unexpected error occurred. Error: {ex.Message}");

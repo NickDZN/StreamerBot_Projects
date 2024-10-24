@@ -9,7 +9,6 @@ public class CPHInline{
 
         try {
             // Retrieve the comma-separated applications and paths from the arguments
-            string applications = args.ContainsKey("apps") ? args["apps"]?.ToString() : string.Empty;
             string applicationPaths = args.ContainsKey("paths") ? args["paths"]?.ToString() : string.Empty;
 
             // Split the input strings into arrays

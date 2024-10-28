@@ -22,10 +22,6 @@ public class CPHInline
 
     public bool Execute()
     {
-
-
-        CPH.actionListBox
-
         // Attempt to get the handle of the currently active window
         IntPtr activeWindowHandle = GetForegroundWindow();
 
@@ -46,24 +42,28 @@ public class CPHInline
         }
 
         // Show the window title and dimensions
-        // MessageBox.Show($"Active Window Title: {windowTitle}\n" +
-        //                 $"Dimensions: {activeWindowRect.Width}x{activeWindowRect.Height}\n" +
-        //                 $"Position: ({activeWindowRect.Left}, {activeWindowRect.Top})");S
+        MessageBox.Show($"Active Window Title: {windowTitle}\n" +
+                        $"Dimensions: {activeWindowRect.Width}x{activeWindowRect.Height}\n" +
+                        $"Position: ({activeWindowRect.Left}, {activeWindowRect.Top})");
 
         // Enable visual styles for the application
         Application.EnableVisualStyles();
 
         // Create an instance of StartupConfigForm, passing the dimensions of the active window
         // Check if form instance is already open
-        if (mainFormInstance == null || mainFormInstance.IsDisposed) {
+        if (mainFormInstance == null || mainFormInstance.IsDisposed)
+        {
+            // Create a new instance of StartupConfigForm if no form is open
             mainFormInstance = new StartupConfigForm(activeWindowRect);
             Application.Run(mainFormInstance);
-        } 
-        else {
+        }
+        else
+        {
+            // Bring the existing form instance to the front
             mainFormInstance.BringToFront();
         }
         
-        return true; 
+        return true; // Return true to indicate successful execution
     }
 }
 

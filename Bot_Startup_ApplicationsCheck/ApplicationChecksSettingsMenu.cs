@@ -15,21 +15,18 @@ public class CPHInline
     private static extern IntPtr GetForegroundWindow();
     private static StartupConfigForm mainFormInstance = null;
 
-
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
-    public bool Execute()
-    {
+    public bool Execute() {
         // Attempt to get the handle of the currently active window
         IntPtr activeWindowHandle = GetForegroundWindow();
 
         // Check if the window was found
-        if (activeWindowHandle == IntPtr.Zero)
-        {
+        if (activeWindowHandle == IntPtr.Zero) {
             MessageBox.Show("No active window found.");
             return false;
         }
@@ -39,40 +36,34 @@ public class CPHInline
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
         // Get the dimensions of the active window
-        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
-        {
+        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect)) {
             MessageBox.Show("Failed to get window dimensions.");
             return false;
         }
-
-        // Show the window title and dimensions
-        MessageBox.Show($"Active Window Title: {windowTitle}\n" +
-                        $"Dimensions: {activeWindowRect.Width}x{activeWindowRect.Height}\n" +
-                        $"Position: ({activeWindowRect.Left}, {activeWindowRect.Top})");
-
+        
         // Enable visual styles for the application
         Application.EnableVisualStyles();
 
+        // Load the global action list
+        List<ActionData> actionList = CPH.GetActions();
+
         // Create an instance of StartupConfigForm, passing the dimensions of the active window
-        // Check if form instance is already open
-        if (mainFormInstance == null || mainFormInstance.IsDisposed)
-        {
+        if (mainFormInstance == null || mainFormInstance.IsDisposed) {
             // Create a new instance of StartupConfigForm if no form is open
-            mainFormInstance = new StartupConfigForm(activeWindowRect);
+            mainFormInstance = new StartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
             Application.Run(mainFormInstance);
-        }
-        else
-        {
+        } else {
             // Bring the existing form instance to the front
             mainFormInstance.BringToFront();
         }
 
-        return true; // Return true to indicate successful execution
+        return true; 
     }
 }
 
 public class StartupConfigForm : Form
 {
+    private List<ActionData> actionDataList; // Store the action data passed to the form
     private Label applicationListLabel = new Label { Text = "Applications to run at startup", Left = 20, Top = 20, AutoSize = true };
     private Label actionListLabel = new Label { Text = "Actions to run at startup", Left = 20, Top = 160, AutoSize = true };
 
@@ -102,8 +93,9 @@ public class StartupConfigForm : Form
 
     private ToolTip toolTip = new ToolTip();
 
-    public StartupConfigForm(Rectangle activeWindowRect)
+    public StartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions) // Constructor updated to accept actions
     {
+        actionDataList = actions; // Store the action data in a local variable
         this.Text = "Startup Applications Settings";
         this.Width = 650;
         this.Height = 400;
@@ -112,9 +104,6 @@ public class StartupConfigForm : Form
         // Set the location of the form to be centered over the active window
         int centerX = activeWindowRect.Left + (activeWindowRect.Width - this.Width) / 2;
         int centerY = activeWindowRect.Top + (activeWindowRect.Height - this.Height) / 2;
-
-        // Show the window title and dimensions
-        MessageBox.Show($"Dimensions: {centerX}x{centerY})");
 
         // Set the form's location
         this.Location = new Point(centerX, centerY);
@@ -263,13 +252,17 @@ public class StartupConfigForm : Form
 
     private void AddAction_Click(object sender, EventArgs e)
     {
-        using (ActionManagerForm actionManagerDialog = new ActionManagerForm())
+        // Open the action manager form and pass the global action list
+        using (ActionManagerForm actionManagerDialog = new ActionManagerForm(actionDataList)) // Pass the actions
         {
-            if (actionManagerDialog.ShowDialog() == DialogResult.OK)
+            if (actionManagerDialog.ShowDialog(this) == DialogResult.OK)
             {
-                string selectedAction = actionManagerDialog.SelectedAction;
-                actionListBox.Items.Add(selectedAction);
-                saveConfigButton.Enabled = true;
+                string selectedAction = actionManagerDialog.SelectedAction; // Get the selected action
+                if (!string.IsNullOrWhiteSpace(selectedAction))
+                {
+                    actionListBox.Items.Add(selectedAction); // Add action to the list box
+                    saveConfigButton.Enabled = true; // Enable save button
+                }
             }
         }
     }
@@ -386,34 +379,43 @@ public class ActionManagerForm : Form
     private ListBox actionListBox = new ListBox { Left = 20, Top = 20, Width = 400, Height = 300 };
     private Button enableActionButton = new Button { Left = 430, Top = 20, Width = 120, Text = "Enable Action" };
     private Button disableActionButton = new Button { Left = 430, Top = 60, Width = 120, Text = "Disable Action" };
-    private List<ActionData> actionDataList = new List<ActionData>();
+    private List<ActionData> actionDataList;
+
     public string SelectedAction { get; private set; }
 
-    public ActionManagerForm()
-    {
-        this.Text = "Actions To Manage";
-        this.Width = 600;
-        this.Height = 400;
-        this.Controls.Add(actionListBox);
-        this.Controls.Add(enableActionButton);
-        this.Controls.Add(disableActionButton);
+public ActionManagerForm(List<ActionData> actionData)
+{
+    this.Text = "Actions To Manage";
+    this.Width = 600;
+    this.Height = 400;
+    this.Controls.Add(actionListBox);
+    this.Controls.Add(enableActionButton);
+    this.Controls.Add(disableActionButton);
 
-        enableActionButton.Click += EnableActionButton_Click;
-        disableActionButton.Click += DisableActionButton_Click;
+    // Initialize actionDataList with the passed-in actionData
+    actionDataList = actionData;
 
-        LoadActions();
-    }
+    enableActionButton.Click += EnableActionButton_Click;
+    disableActionButton.Click += DisableActionButton_Click;
+
+    LoadActions(); // This will populate the actionListBox with actionDataList contents
+}
+
 
     private void LoadActions()
     {
-        actionDataList = GetActions();
+        // Clear the action list box and populate it with actions
+        actionListBox.Items.Clear(); // Clear previous items
+
+        // Loop through each action in the list and display it
         foreach (var action in actionDataList)
         {
+            // Format the display string for each action
             string actionDisplay = $"{action.Name} - {(action.Enabled ? "Enabled" : "Disabled")}";
-            actionListBox.Items.Add(actionDisplay);
+            actionListBox.Items.Add(actionDisplay); // Add to the list box
         }
     }
-
+    
     private void EnableActionButton_Click(object sender, EventArgs e)
     {
         if (actionListBox.SelectedItem != null)
@@ -440,15 +442,6 @@ public class ActionManagerForm : Form
         LoadActions();
     }
 
-    private List<ActionData> GetActions()
-    {
-        return new List<ActionData>
-        {
-            new ActionData { Id = Guid.NewGuid(), Name = "Action1", Enabled = true, Group = "Group1", Queue = "Queue1" },
-            new ActionData { Id = Guid.NewGuid(), Name = "Action2", Enabled = false, Group = "Group1", Queue = "Queue1" },
-        };
-    }
-
     private void EnableAction(string actionName)
     {
         var action = actionDataList.FirstOrDefault(a => a.Name == actionName);
@@ -462,12 +455,3 @@ public class ActionManagerForm : Form
     }
 }
 
-public class ActionData
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; }
-    public bool Enabled { get; set; }
-    public string Group { get; set; }
-    public string Queue { get; set; }
-    public Guid QueueId { get; set; }
-}

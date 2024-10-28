@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -26,7 +28,8 @@ public class CPHInline
         IntPtr activeWindowHandle = GetForegroundWindow();
 
         // Check if the window was found
-        if (activeWindowHandle == IntPtr.Zero) {
+        if (activeWindowHandle == IntPtr.Zero)
+        {
             MessageBox.Show("No active window found.");
             return false;
         }
@@ -36,7 +39,8 @@ public class CPHInline
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
         // Get the dimensions of the active window
-        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect)) {
+        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
+        {
             MessageBox.Show("Failed to get window dimensions.");
             return false;
         }
@@ -62,7 +66,7 @@ public class CPHInline
             // Bring the existing form instance to the front
             mainFormInstance.BringToFront();
         }
-        
+
         return true; // Return true to indicate successful execution
     }
 }
@@ -259,8 +263,15 @@ public class StartupConfigForm : Form
 
     private void AddAction_Click(object sender, EventArgs e)
     {
-        actionListBox.Items.Add("New Action");
-        saveConfigButton.Enabled = true;
+        using (ActionManagerForm actionManagerDialog = new ActionManagerForm())
+        {
+            if (actionManagerDialog.ShowDialog() == DialogResult.OK)
+            {
+                string selectedAction = actionManagerDialog.SelectedAction;
+                actionListBox.Items.Add(selectedAction);
+                saveConfigButton.Enabled = true;
+            }
+        }
     }
 
     private void RemoveAction_Click(object sender, EventArgs e)
@@ -370,4 +381,93 @@ public class PathInputDialog : Form
     }
 }
 
+public class ActionManagerForm : Form
+{
+    private ListBox actionListBox = new ListBox { Left = 20, Top = 20, Width = 400, Height = 300 };
+    private Button enableActionButton = new Button { Left = 430, Top = 20, Width = 120, Text = "Enable Action" };
+    private Button disableActionButton = new Button { Left = 430, Top = 60, Width = 120, Text = "Disable Action" };
+    private List<ActionData> actionDataList = new List<ActionData>();
+    public string SelectedAction { get; private set; }
 
+    public ActionManagerForm()
+    {
+        this.Text = "Actions To Manage";
+        this.Width = 600;
+        this.Height = 400;
+        this.Controls.Add(actionListBox);
+        this.Controls.Add(enableActionButton);
+        this.Controls.Add(disableActionButton);
+
+        enableActionButton.Click += EnableActionButton_Click;
+        disableActionButton.Click += DisableActionButton_Click;
+
+        LoadActions();
+    }
+
+    private void LoadActions()
+    {
+        actionDataList = GetActions();
+        foreach (var action in actionDataList)
+        {
+            string actionDisplay = $"{action.Name} - {(action.Enabled ? "Enabled" : "Disabled")}";
+            actionListBox.Items.Add(actionDisplay);
+        }
+    }
+
+    private void EnableActionButton_Click(object sender, EventArgs e)
+    {
+        if (actionListBox.SelectedItem != null)
+        {
+            string selectedAction = actionListBox.SelectedItem.ToString();
+            EnableAction(selectedAction);
+            RefreshActionList();
+        }
+    }
+
+    private void DisableActionButton_Click(object sender, EventArgs e)
+    {
+        if (actionListBox.SelectedItem != null)
+        {
+            string selectedAction = actionListBox.SelectedItem.ToString();
+            DisableAction(selectedAction);
+            RefreshActionList();
+        }
+    }
+
+    private void RefreshActionList()
+    {
+        actionListBox.Items.Clear();
+        LoadActions();
+    }
+
+    private List<ActionData> GetActions()
+    {
+        return new List<ActionData>
+        {
+            new ActionData { Id = Guid.NewGuid(), Name = "Action1", Enabled = true, Group = "Group1", Queue = "Queue1" },
+            new ActionData { Id = Guid.NewGuid(), Name = "Action2", Enabled = false, Group = "Group1", Queue = "Queue1" },
+        };
+    }
+
+    private void EnableAction(string actionName)
+    {
+        var action = actionDataList.FirstOrDefault(a => a.Name == actionName);
+        if (action != null) action.Enabled = true;
+    }
+
+    private void DisableAction(string actionName)
+    {
+        var action = actionDataList.FirstOrDefault(a => a.Name == actionName);
+        if (action != null) action.Enabled = false;
+    }
+}
+
+public class ActionData
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public bool Enabled { get; set; }
+    public string Group { get; set; }
+    public string Queue { get; set; }
+    public Guid QueueId { get; set; }
+}

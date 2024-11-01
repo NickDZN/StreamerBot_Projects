@@ -13,6 +13,7 @@ public class CPHInline
     // Importing user32.dll to use necessary methods
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
     private static StartupConfigForm mainFormInstance = null;
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -21,12 +22,14 @@ public class CPHInline
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
-    public bool Execute() {
+    public bool Execute()
+    {
         // Attempt to get the handle of the currently active window
         IntPtr activeWindowHandle = GetForegroundWindow();
 
         // Check if the window was found
-        if (activeWindowHandle == IntPtr.Zero) {
+        if (activeWindowHandle == IntPtr.Zero)
+        {
             MessageBox.Show("No active window found.");
             return false;
         }
@@ -36,11 +39,12 @@ public class CPHInline
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
         // Get the dimensions of the active window
-        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect)) {
+        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
+        {
             MessageBox.Show("Failed to get window dimensions.");
             return false;
         }
-        
+
         // Enable visual styles for the application
         Application.EnableVisualStyles();
 
@@ -48,48 +52,165 @@ public class CPHInline
         List<ActionData> actionList = CPH.GetActions();
 
         // Create an instance of StartupConfigForm, passing the dimensions of the active window
-        if (mainFormInstance == null || mainFormInstance.IsDisposed) {
+        if (mainFormInstance == null || mainFormInstance.IsDisposed)
+        {
             // Create a new instance of StartupConfigForm if no form is open
             mainFormInstance = new StartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
             Application.Run(mainFormInstance);
-        } else {
+        }
+        else
+        {
             // Bring the existing form instance to the front
             mainFormInstance.BringToFront();
         }
 
-        return true; 
+        return true;
     }
 }
 
 public class StartupConfigForm : Form
 {
     private List<ActionData> actionDataList; // Store the action data passed to the form
-    private Label applicationListLabel = new Label { Text = "Applications to run at startup", Left = 20, Top = 20, AutoSize = true };
-    private Label actionListLabel = new Label { Text = "Actions to run at startup", Left = 20, Top = 160, AutoSize = true };
+    private Label applicationListLabel = new Label
+    {
+        Text = "Applications to run at startup",
+        Left = 20,
+        Top = 20,
+        AutoSize = true,
+    };
+    private Label actionListLabel = new Label
+    {
+        Text = "Actions to run at startup",
+        Left = 20,
+        Top = 160,
+        AutoSize = true,
+    };
 
     // Application list section
-    private ListBox applicationListBox = new ListBox { Left = 20, Top = 40, Width = 250, Height = 100 };
-    private Button addApplicationButton = new Button { Left = 280, Top = 40, Width = 120, Text = "Add Application" };
-    private Button enterPathButton = new Button { Left = 280, Top = 70, Width = 120, Text = "Add from Textbox" };
-    private Button removeApplicationButton = new Button { Left = 280, Top = 100, Width = 120, Text = "Remove Application", Enabled = false };
+    private ListBox applicationListBox = new ListBox
+    {
+        Left = 20,
+        Top = 40,
+        Width = 250,
+        Height = 100,
+    };
+    private Button addApplicationButton = new Button
+    {
+        Left = 280,
+        Top = 40,
+        Width = 120,
+        Text = "Add Application",
+    };
+    private Button enterPathButton = new Button
+    {
+        Left = 280,
+        Top = 70,
+        Width = 120,
+        Text = "Add from Textbox",
+    };
+    private Button removeApplicationButton = new Button
+    {
+        Left = 280,
+        Top = 100,
+        Width = 120,
+        Text = "Remove Application",
+        Enabled = false,
+    };
 
     // Action list section
-    private ListBox actionListBox = new ListBox { Left = 20, Top = 200, Width = 250, Height = 100 };
-    private Button addActionButton = new Button { Left = 280, Top = 200, Width = 120, Text = "Add Action" };
-    private Button removeActionButton = new Button { Left = 280, Top = 230, Width = 120, Text = "Remove Action", Enabled = false };
+    private ListBox actionListBox = new ListBox
+    {
+        Left = 20,
+        Top = 200,
+        Width = 250,
+        Height = 100,
+    };
+    private Button addActionButton = new Button
+    {
+        Left = 280,
+        Top = 200,
+        Width = 120,
+        Text = "Add Action",
+    };
+    private Button removeActionButton = new Button
+    {
+        Left = 280,
+        Top = 230,
+        Width = 120,
+        Text = "Remove Action",
+        Enabled = false,
+    };
 
-    private GroupBox loadApplicationsGroup = new GroupBox { Text = "Load Applications on Startup", Left = 420, Top = 40, Width = 200, Height = 100 };
-    private RadioButton loadApplicationsYes = new RadioButton { Text = "Yes", Left = 10, Top = 20 };
-    private RadioButton loadApplicationsNo = new RadioButton { Text = "No", Left = 10, Top = 40 };
-    private RadioButton loadApplicationsPrompt = new RadioButton { Text = "Prompt", Left = 10, Top = 60 };
+    private GroupBox loadApplicationsGroup = new GroupBox
+    {
+        Text = "Load Applications on Startup",
+        Left = 420,
+        Top = 40,
+        Width = 200,
+        Height = 100,
+    };
+    private RadioButton loadApplicationsYes = new RadioButton
+    {
+        Text = "Yes",
+        Left = 10,
+        Top = 20,
+    };
+    private RadioButton loadApplicationsNo = new RadioButton
+    {
+        Text = "No",
+        Left = 10,
+        Top = 40,
+    };
+    private RadioButton loadApplicationsPrompt = new RadioButton
+    {
+        Text = "Prompt",
+        Left = 10,
+        Top = 60,
+    };
 
-    private GroupBox loadSpotifyGroup = new GroupBox { Text = "Load Spotify Listener on Startup", Left = 420, Top = 160, Width = 200, Height = 100 };
-    private RadioButton loadSpotifyYes = new RadioButton { Text = "Yes", Left = 10, Top = 20 };
-    private RadioButton loadSpotifyNo = new RadioButton { Text = "No", Left = 10, Top = 40 };
+    private GroupBox loadSpotifyGroup = new GroupBox
+    {
+        Text = "Load Spotify Listener on Startup",
+        Left = 420,
+        Top = 160,
+        Width = 200,
+        Height = 100,
+    };
+    private RadioButton loadSpotifyYes = new RadioButton
+    {
+        Text = "Yes",
+        Left = 10,
+        Top = 20,
+    };
+    private RadioButton loadSpotifyNo = new RadioButton
+    {
+        Text = "No",
+        Left = 10,
+        Top = 40,
+    };
 
-    private Button resetConfigButton = new Button { Left = 20, Top = 320, Width = 100, Text = "Reset Config" };
-    private Button saveConfigButton = new Button { Left = 380, Top = 320, Width = 100, Text = "Save Config", Enabled = false };
-    private Button closeButton = new Button { Left = 500, Top = 320, Width = 100, Text = "Close" };
+    private Button resetConfigButton = new Button
+    {
+        Left = 20,
+        Top = 320,
+        Width = 100,
+        Text = "Reset Config",
+    };
+    private Button saveConfigButton = new Button
+    {
+        Left = 380,
+        Top = 320,
+        Width = 100,
+        Text = "Save Config",
+        Enabled = false,
+    };
+    private Button closeButton = new Button
+    {
+        Left = 500,
+        Top = 320,
+        Width = 100,
+        Text = "Close",
+    };
 
     private ToolTip toolTip = new ToolTip();
 
@@ -181,18 +302,22 @@ public class StartupConfigForm : Form
                     if (fileDialog.ShowDialog(this) == DialogResult.OK)
                     {
                         string selectedFile = fileDialog.FileName;
-                        this.Invoke(new Action(() =>
-                        {
-                            if (!applicationListBox.Items.Contains(selectedFile))
+                        this.Invoke(
+                            new Action(() =>
                             {
-                                applicationListBox.Items.Add(selectedFile);
-                                saveConfigButton.Enabled = true;
-                            }
-                            else
-                            {
-                                MessageBox.Show("This application file has already been added.");
-                            }
-                        }));
+                                if (!applicationListBox.Items.Contains(selectedFile))
+                                {
+                                    applicationListBox.Items.Add(selectedFile);
+                                    saveConfigButton.Enabled = true;
+                                }
+                                else
+                                {
+                                    MessageBox.Show(
+                                        "This application file has already been added."
+                                    );
+                                }
+                            })
+                        );
                     }
                 }
             }
@@ -278,7 +403,12 @@ public class StartupConfigForm : Form
 
     private void ResetConfig_Click(object sender, EventArgs e)
     {
-        DialogResult result = MessageBox.Show("Are you sure you want to reset the configuration?", "Confirm Reset", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+        DialogResult result = MessageBox.Show(
+            "Are you sure you want to reset the configuration?",
+            "Confirm Reset",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
         if (result == DialogResult.Yes)
         {
             applicationListBox.Items.Clear();
@@ -333,21 +463,58 @@ public class PathInputDialog : Form
         Height = 150;
 
         StartPosition = FormStartPosition.Manual;
-        Location = new Point(ownerForm.Left + (ownerForm.Width - Width) / 2,
-                             ownerForm.Top + (ownerForm.Height - Height) / 2);
+        Location = new Point(
+            ownerForm.Left + (ownerForm.Width - Width) / 2,
+            ownerForm.Top + (ownerForm.Height - Height) / 2
+        );
 
-        Label promptLabel = new Label { Text = "Enter or paste the path of the application:", Left = 10, Top = 10, Width = 360 };
-        pathTextBox = new TextBox { Left = 10, Top = 40, Width = 360, ForeColor = Color.Gray, Text = PlaceholderText };
+        Label promptLabel = new Label
+        {
+            Text = "Enter or paste the path of the application:",
+            Left = 10,
+            Top = 10,
+            Width = 360,
+        };
+        pathTextBox = new TextBox
+        {
+            Left = 10,
+            Top = 40,
+            Width = 360,
+            ForeColor = Color.Gray,
+            Text = PlaceholderText,
+        };
 
         // Set up placeholder events
         pathTextBox.GotFocus += RemovePlaceholder;
         pathTextBox.LostFocus += SetPlaceholder;
 
-        okButton = new Button { Text = "OK", Left = 220, Width = 75, Top = 70, DialogResult = DialogResult.OK };
-        cancelButton = new Button { Text = "Cancel", Left = 300, Width = 75, Top = 70, DialogResult = DialogResult.Cancel };
+        okButton = new Button
+        {
+            Text = "OK",
+            Left = 220,
+            Width = 75,
+            Top = 70,
+            DialogResult = DialogResult.OK,
+        };
+        cancelButton = new Button
+        {
+            Text = "Cancel",
+            Left = 300,
+            Width = 75,
+            Top = 70,
+            DialogResult = DialogResult.Cancel,
+        };
 
-        okButton.Click += (sender, e) => { DialogResult = DialogResult.OK; Close(); };
-        cancelButton.Click += (sender, e) => { DialogResult = DialogResult.Cancel; Close(); };
+        okButton.Click += (sender, e) =>
+        {
+            DialogResult = DialogResult.OK;
+            Close();
+        };
+        cancelButton.Click += (sender, e) =>
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        };
 
         Controls.Add(promptLabel);
         Controls.Add(pathTextBox);
@@ -376,31 +543,47 @@ public class PathInputDialog : Form
 
 public class ActionManagerForm : Form
 {
-    private ListBox actionListBox = new ListBox { Left = 20, Top = 20, Width = 400, Height = 300 };
-    private Button enableActionButton = new Button { Left = 430, Top = 20, Width = 120, Text = "Enable Action" };
-    private Button disableActionButton = new Button { Left = 430, Top = 60, Width = 120, Text = "Disable Action" };
+    private ListBox actionListBox = new ListBox
+    {
+        Left = 20,
+        Top = 20,
+        Width = 400,
+        Height = 300,
+    };
+    private Button addActionToListButton = new Button
+    {
+        Left = 430,
+        Top = 20,
+        Width = 120,
+        Text = "Add Action",
+    };
+    private Button cancelAddButton = new Button
+    {
+        Left = 430,
+        Top = 60,
+        Width = 120,
+        Text = "Cancel",
+    };
     private List<ActionData> actionDataList;
 
     public string SelectedAction { get; private set; }
 
-public ActionManagerForm(List<ActionData> actionData)
-{
-    this.Text = "Actions To Manage";
-    this.Width = 600;
-    this.Height = 400;
-    this.Controls.Add(actionListBox);
-    this.Controls.Add(enableActionButton);
-    this.Controls.Add(disableActionButton);
+    public ActionManagerForm(List<ActionData> actionData)
+    {
+        this.Text = "Actions To Manage";
+        this.Width = 600;
+        this.Height = 400;
+        this.Controls.Add(actionListBox);
+        this.Controls.Add(addActionToListButton);
+        this.Controls.Add(cancelAddButton);
 
-    // Initialize actionDataList with the passed-in actionData
-    actionDataList = actionData;
+        // Initialize actionDataList with the passed-in actionData
+        actionDataList = actionData;
 
-    enableActionButton.Click += EnableActionButton_Click;
-    disableActionButton.Click += DisableActionButton_Click;
-
-    LoadActions(); // This will populate the actionListBox with actionDataList contents
-}
-
+        addActionToListButton.Click += AddActionToListButton_Click;
+        cancelAddButton.Click += CancelButton_Click; 
+        LoadActions();
+    }
 
     private void LoadActions()
     {
@@ -415,43 +598,42 @@ public ActionManagerForm(List<ActionData> actionData)
             actionListBox.Items.Add(actionDisplay); // Add to the list box
         }
     }
-    
-    private void EnableActionButton_Click(object sender, EventArgs e)
+
+    private void AddActionToListButton_Click(object sender, EventArgs e)
     {
         if (actionListBox.SelectedItem != null)
         {
-            string selectedAction = actionListBox.SelectedItem.ToString();
-            EnableAction(selectedAction);
-            RefreshActionList();
-        }
-    }
+            string selectedActionDisplay = actionListBox.SelectedItem.ToString();
+            SelectedAction = selectedActionDisplay.Split('-')[0].Trim(); // Extract the action name
 
-    private void DisableActionButton_Click(object sender, EventArgs e)
-    {
-        if (actionListBox.SelectedItem != null)
+            // Close the form and set DialogResult to OK
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        else
         {
-            string selectedAction = actionListBox.SelectedItem.ToString();
-            DisableAction(selectedAction);
-            RefreshActionList();
+            MessageBox.Show("Please select an action to add.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+
     }
 
-    private void RefreshActionList()
+    private void CancelButton_Click(object sender, EventArgs e)
     {
-        actionListBox.Items.Clear();
-        LoadActions();
+       Close();
     }
+
 
     private void EnableAction(string actionName)
     {
         var action = actionDataList.FirstOrDefault(a => a.Name == actionName);
-        if (action != null) action.Enabled = true;
+        if (action != null)
+            action.Enabled = true;
     }
 
     private void DisableAction(string actionName)
     {
         var action = actionDataList.FirstOrDefault(a => a.Name == actionName);
-        if (action != null) action.Enabled = false;
+        if (action != null)
+            action.Enabled = false;
     }
 }
-

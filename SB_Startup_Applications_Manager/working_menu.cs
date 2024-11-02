@@ -70,37 +70,45 @@ public class CPHInline
 
 public class StartupConfigForm : Form
 {
-    // Applications To Start Form Items.   private Label applicationsListLabel = new Label
+    private List<ActionData> actionDataList; // Store the action data passed to the form
+    private Label applicationListLabel = new Label
     {
         Text = "Applications to run at startup",
         Left = 20,
         Top = 20,
         AutoSize = true,
     };
+    private Label actionListLabel = new Label
+    {
+        Text = "Actions to run at startup",
+        Left = 20,
+        Top = 160,
+        AutoSize = true,
+    };
 
-    private ListBox applicationsListBox = new ListBox
+    // Application list section
+    private ListBox applicationListBox = new ListBox
     {
         Left = 20,
         Top = 40,
         Width = 250,
         Height = 100,
     };
-
-    private Button applicationsAddButton = new Button
+    private Button addApplicationButton = new Button
     {
         Left = 280,
         Top = 40,
         Width = 120,
         Text = "Add Application",
     };
-    private Button applicationsAddPathButton = new Button
+    private Button enterPathButton = new Button
     {
         Left = 280,
         Top = 70,
         Width = 120,
-        Text = "Add Path",
+        Text = "Add from Textbox",
     };
-    private Button applicationsRemoveButton = new Button
+    private Button removeApplicationButton = new Button
     {
         Left = 280,
         Top = 100,
@@ -109,8 +117,31 @@ public class StartupConfigForm : Form
         Enabled = false,
     };
 
-    // Load Applications at startup Radio Group
-    private GroupBox sbsam_StartupSettingsRGroup = new GroupBox
+    // Action list section
+    private ListBox actionListBox = new ListBox
+    {
+        Left = 20,
+        Top = 200,
+        Width = 250,
+        Height = 100,
+    };
+    private Button addActionButton = new Button
+    {
+        Left = 280,
+        Top = 200,
+        Width = 120,
+        Text = "Add Action",
+    };
+    private Button removeActionButton = new Button
+    {
+        Left = 280,
+        Top = 230,
+        Width = 120,
+        Text = "Remove Action",
+        Enabled = false,
+    };
+
+    private GroupBox loadApplicationsGroup = new GroupBox
     {
         Text = "Load Applications on Startup",
         Left = 420,
@@ -118,118 +149,57 @@ public class StartupConfigForm : Form
         Width = 200,
         Height = 100,
     };
-    private RadioButton sbsam_StartupSettingsRBYes = new RadioButton
+    private RadioButton loadApplicationsYes = new RadioButton
     {
         Text = "Yes",
         Left = 10,
         Top = 20,
     };
-    private RadioButton sbsam_StartupSettingsRBNo = new RadioButton // Fixed name to avoid duplication
+    private RadioButton loadApplicationsNo = new RadioButton
     {
         Text = "No",
         Left = 10,
         Top = 40,
     };
-    private RadioButton sbsam_StartupSettingsRBPrompt = new RadioButton
+    private RadioButton loadApplicationsPrompt = new RadioButton
     {
         Text = "Prompt",
         Left = 10,
         Top = 60,
     };
 
-    // Seconds to Delay Input
-    private Label delayLabel = new Label
+    private GroupBox loadSpotifyGroup = new GroupBox
     {
-        Text = "Seconds to Delay:",
+        Text = "Load Spotify Listener on Startup",
         Left = 420,
         Top = 160,
-        AutoSize = true,
-    };
-    private NumericUpDown secondsToDelayInput = new NumericUpDown
-    {
-        Left = 420,
-        Top = 180,
-        Width = 60,
-        Minimum = 0, // Minimum delay
-        Maximum = 60, // Maximum delay
-        Value = 5 // Default value
-    };
-
-    // Actions to launch at startup section
-    private Label actionsStatupPermittedLabel = new Label
-    {
-        Text = "Actions to run at startup",
-        Left = 20,
-        Top = 220,
-        AutoSize = true,
-    };
-    private ListBox actionsStatupPermittedListBox = new ListBox
-    {
-        Left = 20,
-        Top = 240,
-        Width = 250,
+        Width = 200,
         Height = 100,
     };
-    private Button actionsStatupPermittedButtonAdd = new Button
+    private RadioButton loadSpotifyYes = new RadioButton
     {
-        Left = 280,
-        Top = 240,
-        Width = 120,
-        Text = "Add Action",
+        Text = "Yes",
+        Left = 10,
+        Top = 20,
     };
-    private Button actionsStatupPermittedButtonRemove = new Button
+    private RadioButton loadSpotifyNo = new RadioButton
     {
-        Left = 280,
-        Top = 270,
-        Width = 120,
-        Text = "Remove Action",
-        Enabled = false,
+        Text = "No",
+        Left = 10,
+        Top = 40,
     };
 
-    // Actions to prevent launch at startup section
-    private Label actionsStatupBlockedLabel = new Label
-    {
-        Text = "Actions to block running at startup",
-        Left = 20,
-        Top = 350,
-        AutoSize = true,
-    };
-
-    private ListBox actionsStatupBlockedListBox = new ListBox
-    {
-        Left = 20,
-        Top = 370,
-        Width = 250,
-        Height = 100,
-    };
-    private Button actionsStatupBlockedListButtonAdd = new Button
-    {
-        Left = 280,
-        Top = 370,
-        Width = 120,
-        Text = "Add Action",
-    };
-    private Button actionsStatupBlockedListButtonRemove = new Button
-    {
-        Left = 280,
-        Top = 400,
-        Width = 120,
-        Text = "Remove Action",
-        Enabled = false,
-    };
-
-    // Form Bottom Buttons. 
     private Button resetConfigButton = new Button
     {
         Left = 20,
-        Top = 490,
+        Top = 320,
         Width = 100,
         Text = "Reset Config",
     };
     private Button saveConfigButton = new Button
     {
         Left = 380,
-        Top = 490,
+        Top = 320,
         Width = 100,
         Text = "Save Config",
         Enabled = false,
@@ -237,10 +207,11 @@ public class StartupConfigForm : Form
     private Button closeButton = new Button
     {
         Left = 500,
-        Top = 490,
+        Top = 320,
         Width = 100,
         Text = "Close",
     };
+
     private ToolTip toolTip = new ToolTip();
 
     public StartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions) // Constructor updated to accept actions
@@ -260,16 +231,16 @@ public class StartupConfigForm : Form
         this.TopMost = true; // Ensure it is on top of the active window
 
         // Add controls to the form
-        this.Controls.Add(applicationsListLabel);
-        this.Controls.Add(applicationsListBox);
-        this.Controls.Add(applicationsAddButton);
-        this.Controls.Add(applicationsAddPathButton);
-        this.Controls.Add(applicationsRemoveButton);
-        this.Controls.Add(actionsStatupPermittedLabel);
-        this.Controls.Add(actionsStatupPermittedListBox);
-        this.Controls.Add(actionsStatupPermittedButtonAdd);
-        this.Controls.Add(actionsStatupPermittedButtonAddRemove);
-        this.Controls.Add(sbsam_StartupSettingsRGroup);
+        this.Controls.Add(applicationListLabel);
+        this.Controls.Add(applicationListBox);
+        this.Controls.Add(addApplicationButton);
+        this.Controls.Add(enterPathButton);
+        this.Controls.Add(removeApplicationButton);
+        this.Controls.Add(actionListLabel);
+        this.Controls.Add(actionListBox);
+        this.Controls.Add(addActionButton);
+        this.Controls.Add(removeActionButton);
+        this.Controls.Add(loadApplicationsGroup);
         this.Controls.Add(loadSpotifyGroup);
         this.Controls.Add(resetConfigButton);
         this.Controls.Add(saveConfigButton);
@@ -280,25 +251,25 @@ public class StartupConfigForm : Form
         InitializeToolTips();
 
         // Event handlers for button clicks
-        applicationsAddButton.Click += AddApplication_Click;
-        applicationsAddPathButton.Click += EnterPathButton_Click;
-        applicationsRemoveButton.Click += RemoveApplication_Click;
-        actionsStatupPermittedButtonAdd.Click += AddAction_Click;
-        actionsStatupPermittedButtonAddRemove.Click += RemoveAction_Click;
+        addApplicationButton.Click += AddApplication_Click;
+        enterPathButton.Click += EnterPathButton_Click;
+        removeApplicationButton.Click += RemoveApplication_Click;
+        addActionButton.Click += AddAction_Click;
+        removeActionButton.Click += RemoveAction_Click;
         resetConfigButton.Click += ResetConfig_Click;
         saveConfigButton.Click += SaveConfig_Click;
         closeButton.Click += CloseButton_Click;
 
         // Event handlers for list item selection changes
-        applicationsListBox.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged;
-        actionsStatupPermittedListBox.SelectedIndexChanged += ActionListBox_SelectedIndexChanged;
+        applicationListBox.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged;
+        actionListBox.SelectedIndexChanged += ActionListBox_SelectedIndexChanged;
     }
 
     private void InitializeComponents()
     {
-        sbsam_StartupSettingsRGroup.Controls.Add(sbsam_StartupSettingsRBYes);
-        sbsam_StartupSettingsRGroup.Controls.Add(sbsam_StartupSettingsRBYes);
-        sbsam_StartupSettingsRGroup.Controls.Add(sbsam_StartupSettingsRBPrompt);
+        loadApplicationsGroup.Controls.Add(loadApplicationsYes);
+        loadApplicationsGroup.Controls.Add(loadApplicationsNo);
+        loadApplicationsGroup.Controls.Add(loadApplicationsPrompt);
 
         loadSpotifyGroup.Controls.Add(loadSpotifyYes);
         loadSpotifyGroup.Controls.Add(loadSpotifyNo);
@@ -306,11 +277,11 @@ public class StartupConfigForm : Form
 
     private void InitializeToolTips()
     {
-        toolTip.SetToolTip(applicationsAddButton, "Select an application file to add.");
-        toolTip.SetToolTip(applicationsAddPathButton, "Add the path entered in the textbox to the list.");
-        toolTip.SetToolTip(applicationsRemoveButton, "Remove the selected application.");
-        toolTip.SetToolTip(actionsStatupPermittedButtonAdd, "Add a new action to run at startup.");
-        toolTip.SetToolTip(actionsStatupPermittedButtonAddRemove, "Remove the selected action.");
+        toolTip.SetToolTip(addApplicationButton, "Select an application file to add.");
+        toolTip.SetToolTip(enterPathButton, "Add the path entered in the textbox to the list.");
+        toolTip.SetToolTip(removeApplicationButton, "Remove the selected application.");
+        toolTip.SetToolTip(addActionButton, "Add a new action to run at startup.");
+        toolTip.SetToolTip(removeActionButton, "Remove the selected action.");
         toolTip.SetToolTip(resetConfigButton, "Reset the configuration to defaults.");
         toolTip.SetToolTip(saveConfigButton, "Save the current configuration.");
         toolTip.SetToolTip(closeButton, "Close the settings window.");
@@ -334,9 +305,9 @@ public class StartupConfigForm : Form
                         this.Invoke(
                             new Action(() =>
                             {
-                                if (!applicationsListBox.Items.Contains(selectedFile))
+                                if (!applicationListBox.Items.Contains(selectedFile))
                                 {
-                                    applicationsListBox.Items.Add(selectedFile);
+                                    applicationListBox.Items.Add(selectedFile);
                                     saveConfigButton.Enabled = true;
                                 }
                                 else
@@ -372,9 +343,9 @@ public class StartupConfigForm : Form
                 {
                     if (File.Exists(pathToAdd) || Directory.Exists(pathToAdd))
                     {
-                        if (!applicationsListBox.Items.Contains(pathToAdd))
+                        if (!applicationListBox.Items.Contains(pathToAdd))
                         {
-                            applicationsListBox.Items.Add(pathToAdd);
+                            applicationListBox.Items.Add(pathToAdd);
                             saveConfigButton.Enabled = true;
                         }
                         else
@@ -397,9 +368,9 @@ public class StartupConfigForm : Form
 
     private void RemoveApplication_Click(object sender, EventArgs e)
     {
-        if (applicationsListBox.SelectedItem != null)
+        if (applicationListBox.SelectedItem != null)
         {
-            applicationsListBox.Items.Remove(applicationsListBox.SelectedItem);
+            applicationListBox.Items.Remove(applicationListBox.SelectedItem);
             saveConfigButton.Enabled = true;
         }
     }
@@ -414,7 +385,7 @@ public class StartupConfigForm : Form
                 string selectedAction = actionManagerDialog.SelectedAction; // Get the selected action
                 if (!string.IsNullOrWhiteSpace(selectedAction))
                 {
-                    actionsStatupPermittedListBox.Items.Add(selectedAction); // Add action to the list box
+                    actionListBox.Items.Add(selectedAction); // Add action to the list box
                     saveConfigButton.Enabled = true; // Enable save button
                 }
             }
@@ -423,9 +394,9 @@ public class StartupConfigForm : Form
 
     private void RemoveAction_Click(object sender, EventArgs e)
     {
-        if (actionsStatupPermittedListBox.SelectedItem != null)
+        if (actionListBox.SelectedItem != null)
         {
-            actionsStatupPermittedListBox.Items.Remove(actionsStatupPermittedListBox.SelectedItem);
+            actionListBox.Items.Remove(actionListBox.SelectedItem);
             saveConfigButton.Enabled = true;
         }
     }
@@ -440,16 +411,16 @@ public class StartupConfigForm : Form
         );
         if (result == DialogResult.Yes)
         {
-            applicationsListBox.Items.Clear();
-            actionsStatupPermittedListBox.Items.Clear();
-            sbsam_StartupSettingsRBYes.Checked = false;
-            sbsam_StartupSettingsRBYes.Checked = false;
-            sbsam_StartupSettingsRBPrompt.Checked = true;
+            applicationListBox.Items.Clear();
+            actionListBox.Items.Clear();
+            loadApplicationsYes.Checked = false;
+            loadApplicationsNo.Checked = false;
+            loadApplicationsPrompt.Checked = true;
             loadSpotifyYes.Checked = false;
             loadSpotifyNo.Checked = true;
             saveConfigButton.Enabled = false;
-            applicationsRemoveButton.Enabled = false;
-            actionsStatupPermittedButtonAddRemove.Enabled = false;
+            removeApplicationButton.Enabled = false;
+            removeActionButton.Enabled = false;
         }
     }
 
@@ -466,12 +437,12 @@ public class StartupConfigForm : Form
 
     private void ApplicationListBox_SelectedIndexChanged(object sender, EventArgs e)
     {
-        applicationsRemoveButton.Enabled = applicationsListBox.SelectedItem != null;
+        removeApplicationButton.Enabled = applicationListBox.SelectedItem != null;
     }
 
     private void ActionListBox_SelectedIndexChanged(object sender, EventArgs e)
     {
-        actionsStatupPermittedButtonAddRemove.Enabled = actionsStatupPermittedListBox.SelectedItem != null;
+        removeActionButton.Enabled = actionListBox.SelectedItem != null;
     }
 }
 

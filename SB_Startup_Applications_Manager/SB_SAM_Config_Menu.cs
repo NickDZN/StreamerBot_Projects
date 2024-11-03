@@ -72,249 +72,252 @@ public class StartupConfigForm : Form
 {
     private List<ActionData> actionDataList; 
 
-    // Design Form Items. 
-    // GroupBox for startup settings
+    // Table Layouts to help with alignment.
+    private TableLayoutPanel sbsam_layoutGroup = new TableLayoutPanel {
+        ColumnCount = 5,
+        RowCount = 1, 
+        Left = 20,
+        Top = 50,
+        Dock = DockStyle.None, 
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        Padding = new Padding(2),
+        CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+    };
+
+    private TableLayoutPanel applicationsLayoutPanel = new TableLayoutPanel {
+        ColumnCount = 2,
+        RowCount = 2,
+        Dock = DockStyle.None,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        Padding = new Padding(2),
+        CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+    };
+
+    // Setting up the layout for buttons on the right side
+    private TableLayoutPanel buttonsLayoutPanel = new TableLayoutPanel {
+        ColumnCount = 1,
+        RowCount = 4,
+        Dock = DockStyle.Fill,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink
+    };
+
+    private TableLayoutPanel actionsPermittedLayoutPanel = new TableLayoutPanel {
+        ColumnCount = 2,
+        RowCount = 2,
+        Dock = DockStyle.None,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        Padding = new Padding(2),
+        CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+    };
+
+    // Setting up the layout for buttons on the right side
+    private TableLayoutPanel actionsPermittedButtonPanel = new TableLayoutPanel {
+        ColumnCount = 1,
+        RowCount = 4,
+        Dock = DockStyle.Fill,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink
+    };
+
+    private TableLayoutPanel actionsBlockedLayoutPanel = new TableLayoutPanel {
+        ColumnCount = 2,
+        RowCount = 2,
+        Dock = DockStyle.None,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        Padding = new Padding(2),
+        CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+    };
+
+    // Setting up the layout for buttons on the right side
+    private TableLayoutPanel actionsBlockedButtonPanel = new TableLayoutPanel {
+        ColumnCount = 1,
+        RowCount = 4,
+        Dock = DockStyle.Fill,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink
+    };
+
+    private TableLayoutPanel mainCanvasButtons = new TableLayoutPanel {
+        ColumnCount = 8,
+        RowCount = 1, 
+        Dock = DockStyle.None, 
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        Padding = new Padding(2),
+        CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+    };
+
+    // Settings Inputs. 
     private GroupBox sbsam_StartupSettingsRGroup = new GroupBox {
         Text = "Load Applications on Startup",
-        Left = 20,
-        Top = 10,
         Width = 350, 
         Height = 60, 
     };
-
-    // TableLayoutPanel to handle alignment in a single row
-    private TableLayoutPanel layoutPanel = new TableLayoutPanel {
-        ColumnCount = 5,
-        RowCount = 1, 
-        Dock = DockStyle.Fill, 
-        AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        Padding = new Padding(5) 
-    };
-
-    // Radio buttons with DockStyle.Fill for vertical centering
     private RadioButton sbsam_StartupSettingsRBYes = new RadioButton {
         Text = "Yes",
         AutoSize = true,
-        Dock = DockStyle.Fill, // Fill cell to center vertically
-        TextAlign = ContentAlignment.MiddleLeft // Align text within the button
+        Dock = DockStyle.Fill,
+        TextAlign = ContentAlignment.MiddleLeft
     };
-
     private RadioButton sbsam_StartupSettingsRBNo = new RadioButton {
         Text = "No",
         AutoSize = true,
         Dock = DockStyle.Fill,
         TextAlign = ContentAlignment.MiddleLeft
     };
-
     private RadioButton sbsam_StartupSettingsRBPrompt = new RadioButton {
         Text = "Prompt",
         AutoSize = true,
         Dock = DockStyle.Fill,
         TextAlign = ContentAlignment.MiddleLeft
     };
-
-    // NumericUpDown for delay with DockStyle.Fill
     private NumericUpDown sbsam_StartupSecondsToDelayInput = new NumericUpDown {
         Width = 50,
         Minimum = 0,
         Maximum = 30,
-        Value = 5,
-        Anchor = AnchorStyles.None, // Allow it to center within the cell
-        Margin = new Padding(0, 0, 0, 0), // Adjust padding for vertical centering
-        TextAlign = HorizontalAlignment.Center
+        Value = 2,
+        Anchor = AnchorStyles.None,
+        Margin = new Padding(0, 0, 0, 0)
     };
-
-    // Label for "Seconds to Delay" with DockStyle.Fill for vertical centering
     private Label sbsam_StartupSettingsdelayLabel = new Label {
-        Text = "Seconds to Delay:",
+        Text = "Second(s) Delay Between Apps:",
         AutoSize = true,
-        Dock = DockStyle.Fill, // Fill cell to center vertically
+        Dock = DockStyle.Fill,
         TextAlign = ContentAlignment.MiddleLeft
     };
 
 
-
-
-    
-    private Label applicationsListLabel = new Label
-    {
+    // Applications Inputs. 
+    private Label applicationsListLabel = new Label {
         Text = "Applications to run at startup",
-        Left = 20,
         AutoSize = true,
     };
 
-    private ListBox applicationsListBox = new ListBox
-    {
-        Left = 20,
+    private ListBox applicationsListBox = new ListBox {
         Width = 250,
         Height = 100,
     };
 
-    private Button applicationsAddButton = new Button
-    {
+    private Button applicationsAddButton = new Button {
         Width = 120,
         Text = "Add Application",
     };
-    private Button applicationsAddPathButton = new Button
-    {
+
+    private Button applicationsAddPathButton = new Button {
         Width = 120,
         Text = "Add Path",
     };
-    private Button applicationsRemoveButton = new Button
-    {
+    private Button applicationsRemoveButton = new Button {
         Width = 120,
         Text = "Remove Application",
         Enabled = false,
     };
 
 
-
     // Actions to launch at startup section
-    private Label actionsStartupPermittedLabel = new Label
-    {
+    private Label actionsStartupPermittedLabel = new Label {
         Text = "Actions to run at startup",
-        Left = 20,
-        Top = 220,
         AutoSize = true,
     };
-    private ListBox actionsStartupPermittedListBox = new ListBox
-    {
-        Left = 20,
-        Top = 240,
+    private ListBox actionsStartupPermittedListBox = new ListBox {
         Width = 250,
         Height = 100,
     };
-    private Button actionsStartupPermittedButtonAdd = new Button
-    {
-        Left = 280,
-        Top = 240,
+    private Button actionsStartupPermittedButtonAdd = new Button {
         Width = 120,
         Text = "Add Action",
     };
-    private Button actionsStartupPermittedButtonRemove = new Button
-    {
-        Left = 280,
-        Top = 270,
+    private Button actionsStartupPermittedButtonRemove = new Button {
         Width = 120,
         Text = "Remove Action",
         Enabled = false,
     };
 
-    // Actions to prevent launch at startup section
-    private Label actionsStartupBlockedLabel = new Label
-    {
+
+    // Actions to prevent launching at startup section
+    private Label actionsStartupBlockedLabel = new Label {
         Text = "Actions to block running at startup",
-        Left = 20,
-        Top = 350,
         AutoSize = true,
     };
 
-    private ListBox actionsStartupBlockedListBox = new ListBox
-    {
-        Left = 20,
-        Top = 370,
+    private ListBox actionsStartupBlockedListBox = new ListBox {
         Width = 250,
         Height = 100,
     };
-    private Button actionsStartupBlockedButtonAdd = new Button
-    {
-        Left = 280,
-        Top = 370,
+
+    private Button actionsStartupBlockedButtonAdd = new Button {
         Width = 120,
         Text = "Add Action",
     };
-    private Button actionsStartupBlockedButtonRemove = new Button
-    {
-        Left = 280,
-        Top = 400,
+
+    private Button actionsStartupBlockedButtonRemove = new Button {
         Width = 120,
         Text = "Remove Action",
         Enabled = false,
     };
 
-    // Form Bottom Buttons. 
-    private Button resetConfigButton = new Button
-    {
-        Left = 20,
-        Top = 490,
-        Width = 100,
-        Text = "Reset Config",
+    // Form Control Buttons. 
+    private Button resetConfigButton = new Button {
+        Width = 70,
+        Text = "Reset All",
     };
-    private Button saveConfigButton = new Button
-    {
-        Left = 380,
-        Top = 490,
-        Width = 100,
-        Text = "Save Config",
+    private Button importConfigButton = new Button {
+        Width = 70,
+        Text = "Import",
+    };
+
+    private Button ExportConfigButton = new Button {
+        Width = 70,
+        Text = "Export",
+    };
+    private Button saveConfigButton = new Button {
+        Width = 70,
+        Text = "Save",
         Enabled = false,
     };
-    private Button closeButton = new Button
-    {
-        Left = 500,
-        Top = 490,
-        Width = 100,
+    private Button closeButton = new Button {
+        Width = 70,
         Text = "Close",
     };
 
-    private Button importConfigButton = new Button
-    {
-        Left = 100,
-        Top = 490,
-        Width = 100,
-        Text = "Import",
-    };
+
 
 
     private ToolTip toolTip = new ToolTip();
 
     public StartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions) // Constructor updated to accept actions
     {
-        actionDataList = actions; // Store the action data in a local variable
-        this.Text = "Startup Applications Settings";
-        this.Width = 650;
-        this.Height = 400;
+        // Store List Locally. 
+        actionDataList = actions;
 
-        // Set the location of the form to be centered over the active window
+        // Form Settings. 
+        this.Text = "Startup Applications Settings";
+        this.Width = 600;
+        this.Height = 600;
+
         // Set the location of the form to be centered over the active window
         int centerX = activeWindowRect.Left + (activeWindowRect.Width - this.Width) / 2;
         int centerY = activeWindowRect.Top + (activeWindowRect.Height - this.Height) / 2;
 
         // Set the form's location
         this.Location = new Point(centerX, centerY);
-        this.TopMost = true; // Ensure it is on top of the active window
+        this.TopMost = true;
 
         // Add controls to the form
-        this.Controls.Add(applicationsListLabel);
-        this.Controls.Add(applicationsListBox);
-        this.Controls.Add(applicationsAddButton);
-        this.Controls.Add(applicationsRemoveButton);
-        this.Controls.Add(applicationsAddPathButton);
-
-
-        PositionApplicationItems(); 
-
-
-        //this.Controls.Add(sbsam_StartupSettingsRGroup);
-
-        // this.Controls.Add(actionsStartupPermittedLabel);
-        // this.Controls.Add(actionsStartupPermittedListBox);
-        // this.Controls.Add(actionsStartupPermittedButtonAdd);
-        // this.Controls.Add(actionsStartupPermittedButtonRemove);
-
-        // this.Controls.Add(actionsStartupBlockedLabel);
-        // this.Controls.Add(actionsStartupBlockedListBox);
-        // this.Controls.Add(actionsStartupBlockedButtonAdd);
-        // this.Controls.Add(actionsStartupBlockedButtonRemove);
-
-        // this.Controls.Add(resetConfigButton);
-        // this.Controls.Add(importConfigButton);
-        // this.Controls.Add(saveConfigButton);
-        // this.Controls.Add(closeButton);
-
-        // Initialize the components and tooltips
         InitialiseStartupOptions();
-        InitializeToolTips();
+        InitialiseApplicationItems();
+        InitialisePermittedActionsItems();
+        InitialiseBlockedActionsItems();
+        InitialiseFormControlButtons();
+        this.Load += PositionApplicationsLayoutPanel;
+
+        // Initialize the components and tooltips        
+        InitialiseToolTips();
 
         // Event handlers for button clicks
         applicationsAddButton.Click += AddApplication_Click;
@@ -326,44 +329,119 @@ public class StartupConfigForm : Form
         saveConfigButton.Click += SaveConfig_Click;
         closeButton.Click += CloseButton_Click;
 
-
-
         // Event handlers for list item selection changes
         applicationsListBox.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged;
         actionsStartupPermittedListBox.SelectedIndexChanged += ActionListBox_SelectedIndexChanged;
     }
 
-    private void InitialiseStartupOptions()
-    {
+    private void InitialiseStartupOptions() {
         // Define a single row with an adjustable height
-        layoutPanel.RowStyles.Clear();
-        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F)); // Set row height to 35 pixels
-
-        //layoutPanel.BackColor = Color.LightGray;
+        sbsam_layoutGroup.RowStyles.Clear();
+        sbsam_layoutGroup.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F)); // Set row height to 35 pixels
 
         // Adding controls to the TableLayoutPanel
-        layoutPanel.Controls.Add(sbsam_StartupSettingsRBYes, 0, 0);
-        layoutPanel.Controls.Add(sbsam_StartupSettingsRBNo, 1, 0);
-        layoutPanel.Controls.Add(sbsam_StartupSettingsRBPrompt, 2, 0);
-        layoutPanel.Controls.Add(sbsam_StartupSecondsToDelayInput, 3, 0);
-        layoutPanel.Controls.Add(sbsam_StartupSettingsdelayLabel, 4, 0);
-
-
-        sbsam_StartupSettingsRGroup.Controls.Add(layoutPanel);
         this.Controls.Add(sbsam_StartupSettingsRGroup);
-
-        //layoutPanel.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
+        sbsam_layoutGroup.Controls.Add(sbsam_StartupSettingsRBYes, 0, 0);
+        sbsam_layoutGroup.Controls.Add(sbsam_StartupSettingsRBNo, 1, 0);
+        sbsam_layoutGroup.Controls.Add(sbsam_StartupSettingsRBPrompt, 2, 0);
+        sbsam_layoutGroup.Controls.Add(sbsam_StartupSecondsToDelayInput, 3, 0);
+        sbsam_layoutGroup.Controls.Add(sbsam_StartupSettingsdelayLabel, 4, 0);
+        sbsam_StartupSettingsRGroup.Controls.Add(sbsam_layoutGroup);     
     }
 
-    private void PositionApplicationItems() { 
-        applicationsListLabel.Top = sbsam_StartupSettingsdelayLabel.Bottom + 10;
-        applicationsListLabel.Left = sbsam_StartupSettingsdelayLabel.Left;
+    private void InitialiseApplicationItems()
+    {
+        applicationsLayoutPanel.Controls.Add(applicationsListLabel, 0, 0); 
+        applicationsLayoutPanel.Controls.Add(applicationsListBox, 0, 1);
 
+        // Add buttons to the buttons layout panel (right side)
+        buttonsLayoutPanel.Controls.Add(applicationsAddButton, 0, 1);
+        buttonsLayoutPanel.Controls.Add(applicationsRemoveButton, 0, 2);
+        buttonsLayoutPanel.Controls.Add(applicationsAddPathButton, 0, 3);
 
+        // Add the buttons layout panel to the right side of the applications layout panel
+        applicationsLayoutPanel.Controls.Add(buttonsLayoutPanel, 1, 1);
+
+        // Set row spans for applications layout panel items
+        applicationsLayoutPanel.SetRowSpan(applicationsListBox, 2);
+
+        // Add the applications layout panel to the main form
+        this.Controls.Add(applicationsLayoutPanel);     
+    }
+
+    private void InitialisePermittedActionsItems()
+    {
+        actionsPermittedLayoutPanel.Controls.Add(actionsStartupPermittedLabel, 0, 0); 
+        actionsPermittedLayoutPanel.Controls.Add(actionsStartupPermittedListBox, 0, 1);
+
+        // Add buttons to the buttons layout panel (right side)
+        actionsPermittedButtonPanel.Controls.Add(actionsStartupPermittedButtonAdd, 0, 1);
+        actionsPermittedButtonPanel.Controls.Add(actionsStartupPermittedButtonRemove, 0, 2);
+
+        // Add the buttons layout panel to the right side of the applications layout panel
+        actionsPermittedLayoutPanel.Controls.Add(actionsPermittedButtonPanel, 1, 1);
+
+        // Set row spans for applications layout panel items
+        actionsPermittedLayoutPanel.SetRowSpan(actionsStartupPermittedListBox, 2);
+
+        // Add the applications layout panel to the main form
+        this.Controls.Add(actionsPermittedLayoutPanel);     
+    }
+
+    private void InitialiseBlockedActionsItems()
+    {
+        actionsBlockedLayoutPanel.Controls.Add(actionsStartupBlockedLabel, 0, 0); 
+        actionsBlockedLayoutPanel.Controls.Add(actionsStartupBlockedListBox, 0, 1);
+
+        // Add buttons to the buttons layout panel (right side)
+        actionsBlockedButtonPanel.Controls.Add(actionsStartupBlockedButtonAdd, 0, 1);
+        actionsBlockedButtonPanel.Controls.Add(actionsStartupBlockedButtonRemove, 0, 2);
+
+        // Add the buttons layout panel to the right side of the applications layout panel
+        actionsBlockedLayoutPanel.Controls.Add(actionsBlockedButtonPanel, 1, 1);
+
+        // Set row spans for applications layout panel items
+        actionsBlockedLayoutPanel.SetRowSpan(actionsStartupBlockedListBox, 2);
+
+        // Add the applications layout panel to the main form
+        this.Controls.Add(actionsBlockedLayoutPanel);     
+    }
+
+    private void InitialiseFormControlButtons()
+    {
+        // Add buttons to the buttons layout panel (right side)
+        mainCanvasButtons.Controls.Add(resetConfigButton, 0, 0);
+        mainCanvasButtons.Controls.Add(ExportConfigButton, 1, 0);
+        mainCanvasButtons.Controls.Add(importConfigButton, 2, 0);
+        mainCanvasButtons.Controls.Add(saveConfigButton, 7, 0);
+        mainCanvasButtons.Controls.Add(closeButton, 8, 0);
+    
+        // Add the applications layout panel to the main form
+        this.Controls.Add(mainCanvasButtons);     
     }
 
 
-    private void InitializeToolTips()
+
+    private void PositionApplicationsLayoutPanel(object sender, EventArgs e) {        
+        // Position applicationsLayoutPanel below sbsam_layoutGroup
+        applicationsLayoutPanel.Top = sbsam_layoutGroup.Bottom + 20;
+        applicationsLayoutPanel.Left = sbsam_layoutGroup.Left;
+
+        // Position actionsPermittedLayoutPanel below sbsam_layoutGroup
+        actionsPermittedLayoutPanel.Top = applicationsLayoutPanel.Bottom + 20;
+        actionsPermittedLayoutPanel.Left = sbsam_layoutGroup.Left;
+
+        // Position actionsBlockedLayoutPanel below sbsam_layoutGroup
+        actionsBlockedLayoutPanel.Top = actionsPermittedLayoutPanel.Bottom + 20;
+        actionsBlockedLayoutPanel.Left = sbsam_layoutGroup.Left;           
+
+        mainCanvasButtons.Top = actionsBlockedLayoutPanel.Bottom + 20;
+        mainCanvasButtons.Left = sbsam_layoutGroup.Left;                        
+    }
+
+
+
+    private void InitialiseToolTips()
     {
         toolTip.SetToolTip(applicationsAddButton, "Select an application file to add.");
         toolTip.SetToolTip(applicationsAddPathButton, "Add the path entered in the textbox to the list.");

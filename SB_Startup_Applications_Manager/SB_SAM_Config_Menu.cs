@@ -14,7 +14,7 @@ public class CPHInline
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
-    private static StartupConfigForm mainFormInstance = null;
+    private static LoadStartupConfigForm mainFormInstance = null;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
@@ -55,7 +55,7 @@ public class CPHInline
         if (mainFormInstance == null || mainFormInstance.IsDisposed)
         {
             // Create a new instance of StartupConfigForm if no form is open
-            mainFormInstance = new StartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
+            mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
             Application.Run(mainFormInstance);
         }
         else
@@ -68,7 +68,7 @@ public class CPHInline
     }
 }
 
-public class StartupConfigForm : Form
+public class LoadStartupConfigForm : Form
 {
     private List<ActionData> actionDataList;
 
@@ -90,7 +90,7 @@ public class StartupConfigForm : Form
     private ListBox applicationsListBox = new ListBox {Width = 250, Height = 100};
     private Button applicationsAddButton = new Button {Width = 120, Text = "Add Application"};
     private Button applicationsAddPathButton = new Button {Width = 120, Text = "Add Path"};
-    private Button applicationsRemoveButton = new Button {Width = 120, Text = "Remove Application" Enabled = false};
+    private Button applicationsRemoveButton = new Button {Width = 120, Text = "Remove Application", Enabled = false};
 
     // Actions Startup Permitted IO's
     private ListBox actionsPermittedListBox = new ListBox {Width = 250, Height = 100};
@@ -103,47 +103,45 @@ public class StartupConfigForm : Form
     private Button actionsBlockedButtonRemove = new Button {Width = 120, Text = "Remove Action", Enabled = false};
     
     //User Settings Controls
-    private Button sbsamOptionsResetAll = new Button { Width = 90, Text = "Remove All" };
-    private Button sbsamOptionsImport = new Button { Width = 90, Text = "Import" };
-    private Button sbsamOptionsExport = new Button { Width = 90, Text = "Export" };
+    private Button sbsamOptionsResetAll = new Button { Width = 80, Text = "Remove All" };
+    private Button sbsamOptionsImport = new Button { Width = 80, Text = "Import" };
+    private Button sbsamOptionsExport = new Button { Width = 80, Text = "Export" };
     
     // Main Form Controls. 
     private Button sbsamControlSaveButton = new Button { Width = 90, Text = "Save", Enabled = false };
     private Button sbsamControlCloseButton = new Button { Width = 90, Text = "Close" };
-    private Button sbsamControlAbout = new Button { Width = 90, Text = "About" };
-    private Button sbsamControlTest = new Button { Width = 90, Text = "Test" };
-
+    private Button sbsamControlAbout = new Button { Width = 80, Text = "About" };
+    private Button sbsamControlTest = new Button { Width = 80, Text = "Test" };
 
     // Tooltips.     
     private ToolTip toolTip = new ToolTip();
 
-    public StartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
-    {
+    public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions) {
+        // Locally store list of actions. 
         actionDataList = actions;
 
         // Set up the main layout panel
         var mainLayoutPanel = BuildCoreForm(activeWindowRect);
 
-        // Add Configuration Controls at the top. 
-        AddConfigurationControlButtons(mainLayoutPanel);
+        // Add User Controls
+        AddConfigurationControls(mainLayoutPanel);
 
         // Add the list box sections. 
-        AddApplicationSection(mainLayoutPanel);
-        AddActionsSection(mainLayoutPanel, "Actions to run at startup", actionsPermittedListBox, actionsPermittedButtonAdd, actionsPermittedButtonRemove);
-        AddActionsSection(mainLayoutPanel, "Actions to block running at startup", actionsBlockedListBox, actionsBlockedButtonAdd, actionsBlockedButtonRemove);
+        AddApplicationControls(mainLayoutPanel);
+        AddActionControls(mainLayoutPanel, "Actions to run at startup", actionsPermittedListBox, actionsPermittedButtonAdd, actionsPermittedButtonRemove);
+        AddActionControls(mainLayoutPanel, "Actions to block running at startup", actionsBlockedListBox, actionsBlockedButtonAdd, actionsBlockedButtonRemove);
 
         // Add the options buttons. 
-        AddStartupOptionsSection(mainLayoutPanel);
+        AddStartupConfigurationControls(mainLayoutPanel);
 
         // Add the control buttons. 
         AddApplicationControlButtons(mainLayoutPanel);
 
     }
 
-    private TableLayoutPanel BuildCoreForm(Rectangle activeWindowRect)
-    {
+    private TableLayoutPanel BuildCoreForm(Rectangle activeWindowRect) {
         // Configure the form properties
-        this.Text = "Startup Applications Settings";
+        this.Text = "Startup Manager";
         this.Width = 500;
         this.Height = 700;
 
@@ -169,12 +167,12 @@ public class StartupConfigForm : Form
     }
 
 
-    private void AddConfigurationControlButtons(TableLayoutPanel mainLayoutPanel)
+    private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
     {
         // 2. Settings Buttons Panel
         TableLayoutPanel settingsPanel = new TableLayoutPanel
         {
-            ColumnCount = 4,
+            ColumnCount = 5,
             RowCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink
@@ -189,6 +187,7 @@ public class StartupConfigForm : Form
         settingsPanel.Controls.Add(sbsamOptionsImport, 1, 1);
         settingsPanel.Controls.Add(sbsamOptionsExport, 2, 1);
         settingsPanel.Controls.Add(sbsamControlAbout, 3, 1);
+        settingsPanel.Controls.Add(sbsamControlTest, 4, 1);
 
         mainLayoutPanel.Controls.Add(settingsPanel);
 
@@ -212,7 +211,7 @@ public class StartupConfigForm : Form
     }
 
 
-    private void AddApplicationSection(TableLayoutPanel mainLayoutPanel)
+    private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)
     {
         TableLayoutPanel applicationsPanel = new TableLayoutPanel
         {
@@ -236,30 +235,33 @@ public class StartupConfigForm : Form
         mainLayoutPanel.Controls.Add(applicationsPanel);
     }
 
-    private void AddActionsSection(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton)
+    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton)
     {
-        TableLayoutPanel actionsPanel = new TableLayoutPanel
-        {
+        TableLayoutPanel actionsPanel = new TableLayoutPanel {
             ColumnCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(0, 10, 0, 10)
         };
 
+        // Configure Objects. 
         actionsPanel.Controls.Add(new Label { Text = title, AutoSize = true }, 0, 0);
         actionsPanel.Controls.Add(listBox, 0, 1);
         actionsPanel.SetRowSpan(listBox, 2);
         listBox.Width = 300;
 
-        // Buttons for actions
+        // Add Objects
         TableLayoutPanel actionButtons = new TableLayoutPanel { ColumnCount = 1, AutoSize = true };
         actionButtons.Controls.Add(addButton);
         actionButtons.Controls.Add(removeButton);
+
+        // Add table to canvas. . 
         actionsPanel.Controls.Add(actionButtons, 1, 1);
 
+        // Finalise. 
         mainLayoutPanel.Controls.Add(actionsPanel);
     }
-    private void AddStartupOptionsSection(TableLayoutPanel mainLayoutPanel)
+    private void AddStartupConfigurationControls(TableLayoutPanel mainLayoutPanel)
     {
         // Create a GroupBox to hold the startup options section
         GroupBox startupOptionsGroup = new GroupBox

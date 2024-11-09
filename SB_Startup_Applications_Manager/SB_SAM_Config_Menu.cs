@@ -238,12 +238,15 @@ public class LoadStartupConfigForm : Form
         appButtons.Controls.Add(applicationsRemoveButton);
         appButtons.Controls.Add(applicationsAddPathButton);
 
+        // Handle selecting an item event. 
         applicationsListBox.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
 
+        // Handle buttons clicked events.
         applicationsAddButton.Click += AddApplication_Click;
         applicationsAddPathButton.Click += EnterPathButton_Click;
         applicationsRemoveButton.Click += RemoveApplication_Click;
 
+        // Display Canvas.
         applicationsPanel.Controls.Add(appButtons, 1, 1);
         mainLayoutPanel.Controls.Add(applicationsPanel);
     }

@@ -194,19 +194,23 @@ public class LoadStartupConfigForm : Form
     }
 
     private void AddApplicationControlButtons(TableLayoutPanel mainLayoutPanel) { 
-        TableLayoutPanel controlButtonsPanel = new TableLayoutPanel
-        {
+        // Define Layout. 
+        TableLayoutPanel controlButtonsPanel = new TableLayoutPanel {
             ColumnCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Bottom
         };
+
+        // Add Buttons. 
         controlButtonsPanel.Controls.Add(sbsamControlSaveButton, 0, 0);
         controlButtonsPanel.Controls.Add(sbsamControlCloseButton, 1, 0);
 
-        sbsamControlSaveButton.Click += CloseButton_Click;
-        sbsamControlCloseButton.Click += CloseButton_Click;
+        // Add event triggers. 
+        sbsamControlSaveButton.Click += MainCanvasSaveButton_Click;
+        sbsamControlCloseButton.Click += MainCanvasCloseButton_Click;
 
+        // Add to Canvas.
         mainLayoutPanel.Controls.Add(controlButtonsPanel);
     }
 
@@ -443,14 +447,12 @@ public class LoadStartupConfigForm : Form
         }
     }
 
-    private void SaveConfig_Click(object sender, EventArgs e)
-    {
+    private void MainCanvasSaveButton_Click(object sender, EventArgs e) {
         MessageBox.Show("Configuration saved!");
         sbsamControlSaveButton.Enabled = false;
     }
 
-    private void CloseButton_Click(object sender, EventArgs e)
-    {
+    private void MainCanvasCloseButton_Click(object sender, EventArgs e) {
         this.Close();
     }
 

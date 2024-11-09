@@ -73,11 +73,11 @@ public class LoadStartupConfigForm : Form
     private List<ActionData> actionDataList;
 
     //SB_SAM Startup Configuration Buttons. 
-    private RadioButton sbsamStartupConfigRBYes = new RadioButton {Text = "Yes", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
-    private RadioButton sbsamStartupConfigRBNo = new RadioButton {Text = "No", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
-    private RadioButton sbsamStartupConfigRBPrompt = new RadioButton {Text = "Prompt", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
-    private Label sbsamStartupConfigDelayLabel = new Label {Text = "Delay (In seconds)", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
-    private NumericUpDown sbsamStartupConfigDelayInput = new NumericUpDown {
+    private RadioButton radioStartupConfigYes = new RadioButton {Text = "Yes", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private RadioButton radioStartupConfigNo = new RadioButton {Text = "No", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private RadioButton radioStartupConfigPrompt = new RadioButton {Text = "Prompt", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private Label lblStartupConfigDelay = new Label {Text = "Delay (In seconds)", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown {
         Width = 40,
         Minimum = 0,
         Maximum = 30,
@@ -87,31 +87,31 @@ public class LoadStartupConfigForm : Form
     };
 
     // Application Start-up IO's.
-    private ListBox applicationsListBox = new ListBox {Width = 250, Height = 100};
-    private Button applicationsAddButton = new Button {Width = 120, Text = "Add Application"};
-    private Button applicationsAddPathButton = new Button {Width = 120, Text = "Add Path"};
-    private Button applicationsRemoveButton = new Button {Width = 120, Text = "Remove Application", Enabled = false};
+    private ListBox lstApplications = new ListBox {Width = 250, Height = 100};
+    private Button btnAddApplication = new Button {Width = 120, Text = "Add Application"};
+    private Button btnAddApplicationPath = new Button {Width = 120, Text = "Add Path"};
+    private Button btnRemoveApplication = new Button {Width = 120, Text = "Remove Application", Enabled = false};
 
     // Actions Startup Permitted IO's
-    private ListBox actionsPermittedListBox = new ListBox {Width = 250, Height = 100};
-    private Button actionsPermittedButtonAdd = new Button {Width = 120, Text = "Add Action"};
-    private Button actionsPermittedButtonRemove = new Button {Width = 120, Text = "Remove Action", Enabled = false};
+    private ListBox lstActionsPermitted = new ListBox {Width = 250, Height = 100};
+    private Button btnAddActionPermitted = new Button {Width = 120, Text = "Add Action"};
+    private Button btnRemoveActionPermitted = new Button {Width = 120, Text = "Remove Action", Enabled = false};
 
     // Actions Startup Blocked IO's
-    private ListBox actionsBlockedListBox = new ListBox {Width = 250, Height = 100};
-    private Button actionsBlockedButtonAdd = new Button {Width = 120, Text = "Add Action"};
-    private Button actionsBlockedButtonRemove = new Button {Width = 120, Text = "Remove Action", Enabled = false};
+    private ListBox lstActionsBlocked = new ListBox {Width = 250, Height = 100};
+    private Button btnAddActionBlocked = new Button {Width = 120, Text = "Add Action"};
+    private Button btnRemoveActionBlocked = new Button {Width = 120, Text = "Remove Action", Enabled = false};
     
     //User Settings Controls
-    private Button sbsamOptionsResetAll = new Button { Width = 80, Text = "Remove All" };
-    private Button sbsamOptionsImport = new Button { Width = 80, Text = "Import" };
-    private Button sbsamOptionsExport = new Button { Width = 80, Text = "Export" };
+    private Button btnResetAllSettings = new Button { Width = 80, Text = "Remove All" };
+    private Button btnImportSettings = new Button { Width = 80, Text = "Import" };
+    private Button btnExportSettings = new Button { Width = 80, Text = "Export" };
     
     // Main Form Controls. 
-    private Button sbsamControlSaveButton = new Button { Width = 90, Text = "Save", Enabled = false };
-    private Button sbsamControlCloseButton = new Button { Width = 90, Text = "Close" };
-    private Button sbsamControlAbout = new Button { Width = 80, Text = "About" };
-    private Button sbsamControlTest = new Button { Width = 80, Text = "Test" };
+    private Button btnSaveForm = new Button { Width = 90, Text = "Save", Enabled = false };
+    private Button btnCloseForm = new Button { Width = 90, Text = "Close" };
+    private Button btnShowAbout = new Button { Width = 80, Text = "About" };
+    private Button btnTestConfig = new Button { Width = 80, Text = "Test" };
 
     // Tooltips.     
     private ToolTip toolTip = new ToolTip();
@@ -128,8 +128,8 @@ public class LoadStartupConfigForm : Form
 
         // Add the list box sections. 
         AddApplicationControls(mainLayoutPanel);
-        AddActionControls(mainLayoutPanel, "Actions to run at startup", actionsPermittedListBox, actionsPermittedButtonAdd, actionsPermittedButtonRemove, ActionListBox_SelectedIndexChanged, AddAction_Click, RemoveAction_Click);
-        AddActionControls(mainLayoutPanel, "Actions to block running at startup", actionsBlockedListBox, actionsBlockedButtonAdd, actionsBlockedButtonRemove);
+        AddActionControls(mainLayoutPanel, "Actions to run at startup", lstActionsPermitted, btnAddActionPermitted, btnRemoveActionPermitted, ActionListBox_SelectedIndexChanged, AddAction_Click, RemoveAction_Click);
+        AddActionControls(mainLayoutPanel, "Actions to block running at startup", lstActionsBlocked, btnAddActionBlocked, btnRemoveActionBlocked);
 
         // Add the options buttons. 
         AddStartupConfigurationControls(mainLayoutPanel);
@@ -182,17 +182,17 @@ public class LoadStartupConfigForm : Form
         settingsPanel.Controls.Add(configurationControlLabel, 0, 0);
         settingsPanel.SetColumnSpan(configurationControlLabel, 2);
 
-        settingsPanel.Controls.Add(sbsamOptionsResetAll, 0, 1);
-        settingsPanel.Controls.Add(sbsamOptionsImport, 1, 1);
-        settingsPanel.Controls.Add(sbsamOptionsExport, 2, 1);
-        settingsPanel.Controls.Add(sbsamControlAbout, 3, 1);
-        settingsPanel.Controls.Add(sbsamControlTest, 4, 1);
+        settingsPanel.Controls.Add(btnResetAllSettings, 0, 1);
+        settingsPanel.Controls.Add(btnImportSettings, 1, 1);
+        settingsPanel.Controls.Add(btnExportSettings, 2, 1);
+        settingsPanel.Controls.Add(btnShowAbout, 3, 1);
+        settingsPanel.Controls.Add(btnTestConfig, 4, 1);
 
-        sbsamOptionsResetAll.Click += MainCanvasCloseButton_Click;
-        sbsamOptionsImport.Click += MainCanvasCloseButton_Click;
-        sbsamOptionsExport.Click += MainCanvasCloseButton_Click;
-        sbsamControlAbout.Click += MainCanvasCloseButton_Click;
-        sbsamControlTest.Click += MainCanvasCloseButton_Click;                                
+        btnResetAllSettings.Click += MainCanvasCloseButton_Click;
+        btnImportSettings.Click += MainCanvasCloseButton_Click;
+        btnExportSettings.Click += MainCanvasCloseButton_Click;
+        btnShowAbout.Click += MainCanvasCloseButton_Click;
+        btnTestConfig.Click += MainCanvasCloseButton_Click;                                
 
         mainLayoutPanel.Controls.Add(settingsPanel);
     }
@@ -210,12 +210,12 @@ public class LoadStartupConfigForm : Form
         };
 
         // Add Buttons. 
-        controlButtonsPanel.Controls.Add(sbsamControlSaveButton, 0, 0);
-        controlButtonsPanel.Controls.Add(sbsamControlCloseButton, 1, 0);
+        controlButtonsPanel.Controls.Add(btnSaveForm, 0, 0);
+        controlButtonsPanel.Controls.Add(btnCloseForm, 1, 0);
 
         // Add event triggers. 
-        sbsamControlSaveButton.Click += MainCanvasSaveButton_Click;
-        sbsamControlCloseButton.Click += MainCanvasCloseButton_Click;
+        btnSaveForm.Click += MainCanvasSaveButton_Click;
+        btnCloseForm.Click += MainCanvasCloseButton_Click;
 
         // Add to Canvas.
         mainLayoutPanel.Controls.Add(controlButtonsPanel);
@@ -230,24 +230,24 @@ public class LoadStartupConfigForm : Form
             Padding = new Padding(0, 10, 0, 10)
         };
 
-        applicationsListBox.Width = 300;
+        lstApplications.Width = 300;
         applicationsPanel.Controls.Add(new Label { Text = "Applications to run at startup", AutoSize = true }, 0, 0);
-        applicationsPanel.Controls.Add(applicationsListBox, 0, 1);
-        applicationsPanel.SetRowSpan(applicationsListBox, 2);
+        applicationsPanel.Controls.Add(lstApplications, 0, 1);
+        applicationsPanel.SetRowSpan(lstApplications, 2);
 
         // Buttons for application list
         TableLayoutPanel appButtons = new TableLayoutPanel { ColumnCount = 1, AutoSize = true };
-        appButtons.Controls.Add(applicationsAddButton);
-        appButtons.Controls.Add(applicationsRemoveButton);
-        appButtons.Controls.Add(applicationsAddPathButton);
+        appButtons.Controls.Add(btnAddApplication);
+        appButtons.Controls.Add(btnRemoveApplication);
+        appButtons.Controls.Add(btnAddApplicationPath);
 
         // Handle selecting an item event. 
-        applicationsListBox.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
+        lstApplications.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
 
         // Handle buttons clicked events.
-        applicationsAddButton.Click += AddApplication_Click;
-        applicationsAddPathButton.Click += EnterPathButton_Click;
-        applicationsRemoveButton.Click += RemoveApplication_Click;
+        btnAddApplication.Click += AddApplication_Click;
+        btnAddApplicationPath.Click += EnterPathButton_Click;
+        btnRemoveApplication.Click += RemoveApplication_Click;
 
         // Display Canvas.
         applicationsPanel.Controls.Add(appButtons, 1, 1);
@@ -311,15 +311,15 @@ public class LoadStartupConfigForm : Form
         startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         // Add radio buttons to the first row
-        startupOptionsPanel.Controls.Add(sbsamStartupConfigRBYes, 0, 0);    // Column 0, Row 0
-        startupOptionsPanel.Controls.Add(sbsamStartupConfigRBNo, 1, 0);     // Column 1, Row 0
-        startupOptionsPanel.Controls.Add(sbsamStartupConfigRBPrompt, 2, 0); // Column 2, Row 0
+        startupOptionsPanel.Controls.Add(radioStartupConfigYes, 0, 0);    // Column 0, Row 0
+        startupOptionsPanel.Controls.Add(radioStartupConfigNo, 1, 0);     // Column 1, Row 0
+        startupOptionsPanel.Controls.Add(radioStartupConfigPrompt, 2, 0); // Column 2, Row 0
 
         // Add the delay label to the second row, spanning the first two columns
-        startupOptionsPanel.Controls.Add(sbsamStartupConfigDelayLabel, 4, 0);
+        startupOptionsPanel.Controls.Add(lblStartupConfigDelay, 4, 0);
 
         // Add the delay input control to the second row, third column
-        startupOptionsPanel.Controls.Add(sbsamStartupConfigDelayInput, 5, 0);
+        startupOptionsPanel.Controls.Add(numupdwnStartupConfigDelay, 5, 0);
 
         // Add the TableLayoutPanel to the GroupBox
         startupOptionsGroup.Controls.Add(startupOptionsPanel);
@@ -344,9 +344,9 @@ public class LoadStartupConfigForm : Form
                         string selectedFile = fileDialog.FileName;
                         this.Invoke(
                             new Action(() => {
-                                if (!applicationsListBox.Items.Contains(selectedFile)) {
-                                    applicationsListBox.Items.Add(selectedFile);
-                                    sbsamControlSaveButton.Enabled = true;
+                                if (!lstApplications.Items.Contains(selectedFile)) {
+                                    lstApplications.Items.Add(selectedFile);
+                                    btnSaveForm.Enabled = true;
                                 }
                                 else {
                                     MessageBox.Show("This application file has already been added.");
@@ -377,10 +377,10 @@ public class LoadStartupConfigForm : Form
                 {
                     if (File.Exists(pathToAdd) || Directory.Exists(pathToAdd))
                     {
-                        if (!applicationsListBox.Items.Contains(pathToAdd))
+                        if (!lstApplications.Items.Contains(pathToAdd))
                         {
-                            applicationsListBox.Items.Add(pathToAdd);
-                            sbsamControlSaveButton.Enabled = true;
+                            lstApplications.Items.Add(pathToAdd);
+                            btnSaveForm.Enabled = true;
                         }
                         else
                         {
@@ -401,20 +401,20 @@ public class LoadStartupConfigForm : Form
     }
 
     private void RemoveApplication_Click(object sender, EventArgs e) {
-        if (applicationsListBox.SelectedItem != null) {
-            applicationsListBox.Items.Remove(applicationsListBox.SelectedItem);
-            sbsamControlSaveButton.Enabled = true;
+        if (lstApplications.SelectedItem != null) {
+            lstApplications.Items.Remove(lstApplications.SelectedItem);
+            btnSaveForm.Enabled = true;
         }
     }
 
     private void ApplicationListBox_SelectedIndexChanged(object sender, EventArgs e) {
-        applicationsRemoveButton.Enabled = applicationsListBox.SelectedItem != null;
+        btnRemoveApplication.Enabled = lstApplications.SelectedItem != null;
     }
 
 
 
     private void AddActionPermitted_SelIndhanged(object sender, EventArgs e) {
-        actionsPermittedButtonRemove.Enabled = actionsPermittedListBox.SelectedItem != null;
+        btnRemoveActionPermitted.Enabled = lstActionsPermitted.SelectedItem != null;
     }
 
     private void AddActionPermitted_Click(object sender, EventArgs e) {
@@ -422,22 +422,22 @@ public class LoadStartupConfigForm : Form
             if (actionManagerDialog.ShowDialog(this) == DialogResult.OK) {
                 string selectedAction = actionManagerDialog.SelectedAction; 
                 if (!string.IsNullOrWhiteSpace(selectedAction)) {
-                    actionsPermittedListBox.Items.Add(selectedAction);
-                    sbsamControlSaveButton.Enabled = true;
+                    lstActionsPermitted.Items.Add(selectedAction);
+                    btnSaveForm.Enabled = true;
                 }
             }
         }
     }
 
     private void RemoveActionPermitted_Click(object sender, EventArgs e) {
-        if (actionsPermittedListBox.SelectedItem != null) {
-            actionsPermittedListBox.Items.Remove(actionsPermittedListBox.SelectedItem);
-            sbsamControlSaveButton.Enabled = true;
+        if (lstActionsPermitted.SelectedItem != null) {
+            lstActionsPermitted.Items.Remove(lstActionsPermitted.SelectedItem);
+            btnSaveForm.Enabled = true;
         }
     }
 
     private void AddActionBlocked_SelIndhanged(object sender, EventArgs e) {
-        actionsPermittedButtonRemove.Enabled = actionsPermittedListBox.SelectedItem != null;
+        btnRemoveActionPermitted.Enabled = lstActionsPermitted.SelectedItem != null;
     }
 
     private void AddActionBlocked_Click(object sender, EventArgs e) {
@@ -445,17 +445,17 @@ public class LoadStartupConfigForm : Form
             if (actionManagerDialog.ShowDialog(this) == DialogResult.OK) {
                 string selectedAction = actionManagerDialog.SelectedAction; 
                 if (!string.IsNullOrWhiteSpace(selectedAction)) {
-                    actionsPermittedListBox.Items.Add(selectedAction);
-                    sbsamControlSaveButton.Enabled = true;
+                    lstActionsPermitted.Items.Add(selectedAction);
+                    btnSaveForm.Enabled = true;
                 }
             }
         }
     }
 
     private void RemoveActionBlocked_Click(object sender, EventArgs e) {
-        if (actionsPermittedListBox.SelectedItem != null) {
-            actionsPermittedListBox.Items.Remove(actionsPermittedListBox.SelectedItem);
-            sbsamControlSaveButton.Enabled = true;
+        if (lstActionsPermitted.SelectedItem != null) {
+            lstActionsPermitted.Items.Remove(lstActionsPermitted.SelectedItem);
+            btnSaveForm.Enabled = true;
         }
     }
 
@@ -468,20 +468,20 @@ public class LoadStartupConfigForm : Form
         );
 
         if (result == DialogResult.Yes) {
-            applicationsListBox.Items.Clear();
-            actionsPermittedListBox.Items.Clear();
-            sbsamStartupConfigRBYes.Checked = false;
-            sbsamStartupConfigRBNo.Checked = false;
-            sbsamStartupConfigRBPrompt.Checked = true;
-            sbsamControlSaveButton.Enabled = false;
-            applicationsRemoveButton.Enabled = false;
-            actionsPermittedButtonRemove.Enabled = false;
+            lstApplications.Items.Clear();
+            lstActionsPermitted.Items.Clear();
+            radioStartupConfigYes.Checked = false;
+            radioStartupConfigNo.Checked = false;
+            radioStartupConfigPrompt.Checked = true;
+            btnSaveForm.Enabled = false;
+            btnRemoveApplication.Enabled = false;
+            btnRemoveActionPermitted.Enabled = false;
         }
     }
 
     private void MainCanvasSaveButton_Click(object sender, EventArgs e) {
         MessageBox.Show("Configuration saved!");
-        sbsamControlSaveButton.Enabled = false;
+        btnSaveForm.Enabled = false;
     }
 
     private void MainCanvasCloseButton_Click(object sender, EventArgs e) {

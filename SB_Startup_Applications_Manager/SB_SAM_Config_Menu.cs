@@ -128,7 +128,7 @@ public class LoadStartupConfigForm : Form
 
         // Add the list box sections. 
         AddApplicationControls(mainLayoutPanel);
-        AddActionControls(mainLayoutPanel, "Actions to run at startup", actionsPermittedListBox, actionsPermittedButtonAdd, actionsPermittedButtonRemove);
+        AddActionControls(mainLayoutPanel, "Actions to run at startup", actionsPermittedListBox, actionsPermittedButtonAdd, actionsPermittedButtonRemove, ActionListBox_SelectedIndexChanged, AddAction_Click, RemoveAction_Click);
         AddActionControls(mainLayoutPanel, "Actions to block running at startup", actionsBlockedListBox, actionsBlockedButtonAdd, actionsBlockedButtonRemove);
 
         // Add the options buttons. 
@@ -197,6 +197,8 @@ public class LoadStartupConfigForm : Form
         mainLayoutPanel.Controls.Add(settingsPanel);
     }
 
+    // Flow control. Save and exit buttons. 
+    //ToDo: Centralise buttons to the bottom. 
     private void AddApplicationControlButtons(TableLayoutPanel mainLayoutPanel) { 
         
         // Define Layout. 
@@ -219,6 +221,7 @@ public class LoadStartupConfigForm : Form
         mainLayoutPanel.Controls.Add(controlButtonsPanel);
     }
 
+    // Application list and controls. 
     private void AddApplicationControls(TableLayoutPanel mainLayoutPanel) {
         TableLayoutPanel applicationsPanel = new TableLayoutPanel {
             ColumnCount = 2,
@@ -251,7 +254,8 @@ public class LoadStartupConfigForm : Form
         mainLayoutPanel.Controls.Add(applicationsPanel);
     }
 
-    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton) {
+    //Actions allowed list and controls. 
+    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton, EventHandler ListBoxSelected EventHandler addButtonClick, EventHandler removeButtonClick) {
         
         TableLayoutPanel actionsPanel = new TableLayoutPanel {
             ColumnCount = 2,
@@ -271,6 +275,11 @@ public class LoadStartupConfigForm : Form
         actionButtons.Controls.Add(addButton);
         actionButtons.Controls.Add(removeButton);
 
+        listBox.SelectedIndexChanged += ListBoxSelected; 
+
+        addButton.Click += addButtonClick; 
+        removeButton.Click += removeButtonClick; 
+
         // Add table to canvas. . 
         actionsPanel.Controls.Add(actionButtons, 1, 1);
 
@@ -280,16 +289,14 @@ public class LoadStartupConfigForm : Form
 
     private void AddStartupConfigurationControls(TableLayoutPanel mainLayoutPanel) {
         // Create a GroupBox to hold the startup options section
-        GroupBox startupOptionsGroup = new GroupBox
-        {
+        GroupBox startupOptionsGroup = new GroupBox {
             Text = "Load Applications on Startup",
             Width = 400,
             Height = 80
         };
 
         // Create a TableLayoutPanel with 3 columns and 2 rows to align options
-        TableLayoutPanel startupOptionsPanel = new TableLayoutPanel
-        {
+        TableLayoutPanel startupOptionsPanel = new TableLayoutPanel {
             ColumnCount = 3,
             RowCount = 6,
             Dock = DockStyle.Fill,
@@ -299,9 +306,9 @@ public class LoadStartupConfigForm : Form
         };
 
         // Define column styles for alignment
-        startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); // Fixed width for the first column
-        startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); // Fixed width for the second column
-        startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));  // Remaining space for the third column
+        startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60));
+        startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60));
+        startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         // Add radio buttons to the first row
         startupOptionsPanel.Controls.Add(sbsamStartupConfigRBYes, 0, 0);    // Column 0, Row 0
@@ -358,7 +365,7 @@ public class LoadStartupConfigForm : Form
         fileDialogThread.Start();
     }
 
-    private void EnterPathButton_Click(object sender, EventArgs e)
+    private void AddApplicationPath_Click(object sender, EventArgs e)
     {
         using (PathInputDialog pathDialog = new PathInputDialog(this))
         {
@@ -400,41 +407,67 @@ public class LoadStartupConfigForm : Form
         }
     }
 
-    private void AddAction_Click(object sender, EventArgs e)
-    {
-        // Open the action manager form and pass the global action list
-        using (ActionManagerForm actionManagerDialog = new ActionManagerForm(actionDataList)) // Pass the actions
-        {
-            if (actionManagerDialog.ShowDialog(this) == DialogResult.OK)
-            {
-                string selectedAction = actionManagerDialog.SelectedAction; // Get the selected action
-                if (!string.IsNullOrWhiteSpace(selectedAction))
-                {
-                    actionsPermittedListBox.Items.Add(selectedAction); // Add action to the list box
-                    sbsamControlSaveButton.Enabled = true; // Enable save button
+    private void ApplicationListBox_SelectedIndexChanged(object sender, EventArgs e) {
+        applicationsRemoveButton.Enabled = applicationsListBox.SelectedItem != null;
+    }
+
+
+
+    private void AddActionPermitted_SelIndhanged(object sender, EventArgs e) {
+        actionsPermittedButtonRemove.Enabled = actionsPermittedListBox.SelectedItem != null;
+    }
+
+    private void AddActionPermitted_Click(object sender, EventArgs e) {
+        using (ActionManagerForm actionManagerDialog = new ActionManagerForm(actionDataList)) {
+            if (actionManagerDialog.ShowDialog(this) == DialogResult.OK) {
+                string selectedAction = actionManagerDialog.SelectedAction; 
+                if (!string.IsNullOrWhiteSpace(selectedAction)) {
+                    actionsPermittedListBox.Items.Add(selectedAction);
+                    sbsamControlSaveButton.Enabled = true;
                 }
             }
         }
     }
 
-    private void RemoveAction_Click(object sender, EventArgs e)
-    {
+    private void RemoveActionPermitted_Click(object sender, EventArgs e) {
         if (actionsPermittedListBox.SelectedItem != null) {
             actionsPermittedListBox.Items.Remove(actionsPermittedListBox.SelectedItem);
             sbsamControlSaveButton.Enabled = true;
         }
     }
 
-    private void ResetConfig_Click(object sender, EventArgs e)
-    {
+    private void AddActionBlocked_SelIndhanged(object sender, EventArgs e) {
+        actionsPermittedButtonRemove.Enabled = actionsPermittedListBox.SelectedItem != null;
+    }
+
+    private void AddActionBlocked_Click(object sender, EventArgs e) {
+        using (ActionManagerForm actionManagerDialog = new ActionManagerForm(actionDataList)) {
+            if (actionManagerDialog.ShowDialog(this) == DialogResult.OK) {
+                string selectedAction = actionManagerDialog.SelectedAction; 
+                if (!string.IsNullOrWhiteSpace(selectedAction)) {
+                    actionsPermittedListBox.Items.Add(selectedAction);
+                    sbsamControlSaveButton.Enabled = true;
+                }
+            }
+        }
+    }
+
+    private void RemoveActionBlocked_Click(object sender, EventArgs e) {
+        if (actionsPermittedListBox.SelectedItem != null) {
+            actionsPermittedListBox.Items.Remove(actionsPermittedListBox.SelectedItem);
+            sbsamControlSaveButton.Enabled = true;
+        }
+    }
+
+    private void ResetConfig_Click(object sender, EventArgs e) {
         DialogResult result = MessageBox.Show(
             "Are you sure you want to reset the configuration?",
             "Confirm Reset",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning
         );
-        if (result == DialogResult.Yes)
-        {
+
+        if (result == DialogResult.Yes) {
             applicationsListBox.Items.Clear();
             actionsPermittedListBox.Items.Clear();
             sbsamStartupConfigRBYes.Checked = false;
@@ -453,15 +486,6 @@ public class LoadStartupConfigForm : Form
 
     private void MainCanvasCloseButton_Click(object sender, EventArgs e) {
         this.Close();
-    }
-
-    private void ApplicationListBox_SelectedIndexChanged(object sender, EventArgs e) {
-        applicationsRemoveButton.Enabled = applicationsListBox.SelectedItem != null;
-    }
-
-    private void ActionListBox_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        actionsPermittedButtonRemove.Enabled = actionsPermittedListBox.SelectedItem != null;
     }
 }
 

@@ -72,101 +72,12 @@ public class StartupConfigForm : Form
 {
     private List<ActionData> actionDataList;
 
-    // Settings Inputs. 
-    private GroupBox sbsam_StartupSettingsRGroup = new GroupBox
-    {
-        Text = "Load Applications on Startup",
-        Width = 350,
-        Height = 60,
-    };
-    private RadioButton sbsam_StartupSettingsRBYes = new RadioButton
-    {
-        Text = "Yes",
-        AutoSize = true,
-        Dock = DockStyle.Fill,
-        TextAlign = ContentAlignment.MiddleLeft
-    };
-    private RadioButton sbsam_StartupSettingsRBNo = new RadioButton
-    {
-        Text = "No",
-        AutoSize = true,
-        Dock = DockStyle.Fill,
-        TextAlign = ContentAlignment.MiddleLeft
-    };
-    private RadioButton sbsam_StartupSettingsRBPrompt = new RadioButton
-    {
-        Text = "Prompt",
-        AutoSize = true,
-        Dock = DockStyle.Fill,
-        TextAlign = ContentAlignment.MiddleLeft
-    };
-
-    private Label sbsam_StartupSettingsdelayLabel = new Label
-    {
-        Text = "Delay (In seconds)",
-        AutoSize = true,
-        Dock = DockStyle.Fill,
-        TextAlign = ContentAlignment.MiddleLeft
-    };
-
-
-    // Applications Inputs. 
-    private Label applicationsListLabel = new Label
-    {
-        Text = "Applications to run at startup",
-        AutoSize = true,
-    };
-
-    private ListBox applicationsListBox = new ListBox
-    {
-        Width = 250,
-        Height = 100,
-    };
-
-    private Button applicationsAddButton = new Button
-    {
-        Width = 120,
-        Text = "Add Application",
-    };
-
-    private Button applicationsAddPathButton = new Button
-    {
-        Width = 120,
-        Text = "Add Path",
-    };
-    private Button applicationsRemoveButton = new Button
-    {
-        Width = 120,
-        Text = "Remove Application",
-        Enabled = false,
-    };
-
-
-    // Actions to launch at startup section
-    private Label actionsStartupPermittedLabel = new Label
-    {
-        Text = "Actions to run at startup",
-        AutoSize = true,
-    };
-    private ListBox actionsStartupPermittedListBox = new ListBox
-    {
-        Width = 250,
-        Height = 100,
-    };
-    private Button actionsStartupPermittedButtonAdd = new Button
-    {
-        Width = 120,
-        Text = "Add Action",
-    };
-    private Button actionsStartupPermittedButtonRemove = new Button
-    {
-        Width = 120,
-        Text = "Remove Action",
-        Enabled = false,
-    };
-
-    private NumericUpDown sbsam_StartupSecondsToDelayInput = new NumericUpDown
-    {
+    //SB_SAM Startup Configuration Buttons. 
+    private RadioButton sbsamStartupConfigRBYes = new RadioButton {Text = "Yes", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private RadioButton sbsamStartupConfigRBNo = new RadioButton {Text = "No", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private RadioButton sbsamStartupConfigRBPrompt = new RadioButton {Text = "Prompt", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private Label sbsamStartupConfigDelayLabel = new Label {Text = "Delay (In seconds)", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
+    private NumericUpDown sbsamStartupConfigDelayInput = new NumericUpDown {
         Width = 40,
         Minimum = 0,
         Maximum = 30,
@@ -175,42 +86,35 @@ public class StartupConfigForm : Form
         Margin = new Padding(2, 0, 0, 0)
     };
 
-    // Actions to prevent launching at startup section
-    private Label actionsStartupBlockedLabel = new Label
-    {
-        Text = "Actions to block running at startup",
-        AutoSize = true,
-    };
+    // Application Start-up IO's.
+    private ListBox applicationsListBox = new ListBox {Width = 250, Height = 100};
+    private Button applicationsAddButton = new Button {Width = 120, Text = "Add Application"};
+    private Button applicationsAddPathButton = new Button {Width = 120, Text = "Add Path"};
+    private Button applicationsRemoveButton = new Button {Width = 120, Text = "Remove Application" Enabled = false};
 
-    private ListBox actionsStartupBlockedListBox = new ListBox
-    {
-        Width = 250,
-        Height = 100,
-    };
+    // Actions Startup Permitted IO's
+    private ListBox actionsPermittedListBox = new ListBox {Width = 250, Height = 100};
+    private Button actionsPermittedButtonAdd = new Button {Width = 120, Text = "Add Action"};
+    private Button actionsPermittedButtonRemove = new Button {Width = 120, Text = "Remove Action", Enabled = false};
 
-    private Button actionsStartupBlockedButtonAdd = new Button
-    {
-        Width = 120,
-        Text = "Add Action",
-    };
-
-    private Button actionsStartupBlockedButtonRemove = new Button
-    {
-        Width = 120,
-        Text = "Remove Action",
-        Enabled = false,
-    };
-
-
-
-
-    private Button sbsamControlSaveButton = new Button { Width = 90, Text = "Save", Enabled = false };
-    private Button sbsamControlCloseButton = new Button { Width = 90, Text = "Close" };
+    // Actions Startup Blocked IO's
+    private ListBox actionsBlockedListBox = new ListBox {Width = 250, Height = 100};
+    private Button actionsBlockedButtonAdd = new Button {Width = 120, Text = "Add Action"};
+    private Button actionsBlockedButtonRemove = new Button {Width = 120, Text = "Remove Action", Enabled = false};
+    
+    //User Settings Controls
     private Button sbsamOptionsResetAll = new Button { Width = 90, Text = "Remove All" };
-    private Button sbsamOptionsAbout = new Button { Width = 90, Text = "About" };
     private Button sbsamOptionsImport = new Button { Width = 90, Text = "Import" };
     private Button sbsamOptionsExport = new Button { Width = 90, Text = "Export" };
+    
+    // Main Form Controls. 
+    private Button sbsamControlSaveButton = new Button { Width = 90, Text = "Save", Enabled = false };
+    private Button sbsamControlCloseButton = new Button { Width = 90, Text = "Close" };
+    private Button sbsamControlAbout = new Button { Width = 90, Text = "About" };
+    private Button sbsamControlTest = new Button { Width = 90, Text = "Test" };
 
+
+    // Tooltips.     
     private ToolTip toolTip = new ToolTip();
 
     public StartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
@@ -218,15 +122,15 @@ public class StartupConfigForm : Form
         actionDataList = actions;
 
         // Set up the main layout panel
-        var mainLayoutPanel = SetupFormBasicLayout(activeWindowRect);
+        var mainLayoutPanel = BuildCoreForm(activeWindowRect);
 
         // Add Configuration Controls at the top. 
         AddConfigurationControlButtons(mainLayoutPanel);
 
         // Add the list box sections. 
         AddApplicationSection(mainLayoutPanel);
-        AddActionsSection(mainLayoutPanel, "Actions to run at startup", actionsStartupPermittedListBox, actionsStartupPermittedButtonAdd, actionsStartupPermittedButtonRemove);
-        AddActionsSection(mainLayoutPanel, "Actions to block running at startup", actionsStartupBlockedListBox, actionsStartupBlockedButtonAdd, actionsStartupBlockedButtonRemove);
+        AddActionsSection(mainLayoutPanel, "Actions to run at startup", actionsPermittedListBox, actionsPermittedButtonAdd, actionsPermittedButtonRemove);
+        AddActionsSection(mainLayoutPanel, "Actions to block running at startup", actionsBlockedListBox, actionsBlockedButtonAdd, actionsBlockedButtonRemove);
 
         // Add the options buttons. 
         AddStartupOptionsSection(mainLayoutPanel);
@@ -236,7 +140,7 @@ public class StartupConfigForm : Form
 
     }
 
-    private TableLayoutPanel SetupFormBasicLayout(Rectangle activeWindowRect)
+    private TableLayoutPanel BuildCoreForm(Rectangle activeWindowRect)
     {
         // Configure the form properties
         this.Text = "Startup Applications Settings";
@@ -284,7 +188,7 @@ public class StartupConfigForm : Form
         settingsPanel.Controls.Add(sbsamOptionsResetAll, 0, 1);
         settingsPanel.Controls.Add(sbsamOptionsImport, 1, 1);
         settingsPanel.Controls.Add(sbsamOptionsExport, 2, 1);
-        settingsPanel.Controls.Add(sbsamOptionsAbout, 3, 1);
+        settingsPanel.Controls.Add(sbsamControlAbout, 3, 1);
 
         mainLayoutPanel.Controls.Add(settingsPanel);
 
@@ -300,6 +204,10 @@ public class StartupConfigForm : Form
         };
         controlButtonsPanel.Controls.Add(sbsamControlSaveButton, 0, 0);
         controlButtonsPanel.Controls.Add(sbsamControlCloseButton, 1, 0);
+
+        sbsamControlSaveButton.Click += CloseButton_Click;
+        sbsamControlCloseButton.Click += CloseButton_Click;
+
         mainLayoutPanel.Controls.Add(controlButtonsPanel);
     }
 
@@ -365,7 +273,7 @@ public class StartupConfigForm : Form
         TableLayoutPanel startupOptionsPanel = new TableLayoutPanel
         {
             ColumnCount = 3,
-            RowCount = 2,
+            RowCount = 6,
             Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -378,23 +286,21 @@ public class StartupConfigForm : Form
         startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));  // Remaining space for the third column
 
         // Add radio buttons to the first row
-        startupOptionsPanel.Controls.Add(sbsam_StartupSettingsRBYes, 0, 0);    // Column 0, Row 0
-        startupOptionsPanel.Controls.Add(sbsam_StartupSettingsRBNo, 1, 0);     // Column 1, Row 0
-        startupOptionsPanel.Controls.Add(sbsam_StartupSettingsRBPrompt, 2, 0); // Column 2, Row 0
+        startupOptionsPanel.Controls.Add(sbsamStartupConfigRBYes, 0, 0);    // Column 0, Row 0
+        startupOptionsPanel.Controls.Add(sbsamStartupConfigRBNo, 1, 0);     // Column 1, Row 0
+        startupOptionsPanel.Controls.Add(sbsamStartupConfigRBPrompt, 2, 0); // Column 2, Row 0
 
         // Add the delay label to the second row, spanning the first two columns
-        startupOptionsPanel.Controls.Add(sbsam_StartupSettingsdelayLabel, 0, 1);
-        startupOptionsPanel.SetColumnSpan(sbsam_StartupSettingsdelayLabel, 2);
+        startupOptionsPanel.Controls.Add(sbsamStartupConfigDelayLabel, 4, 0);
 
         // Add the delay input control to the second row, third column
-        startupOptionsPanel.Controls.Add(sbsam_StartupSecondsToDelayInput, 2, 1);
+        startupOptionsPanel.Controls.Add(sbsamStartupConfigDelayInput, 5, 0);
 
         // Add the TableLayoutPanel to the GroupBox
         startupOptionsGroup.Controls.Add(startupOptionsPanel);
 
         // Add the GroupBox to the main layout panel
         mainLayoutPanel.Controls.Add(startupOptionsGroup);
-
 
     }
 
@@ -498,7 +404,7 @@ public class StartupConfigForm : Form
                 string selectedAction = actionManagerDialog.SelectedAction; // Get the selected action
                 if (!string.IsNullOrWhiteSpace(selectedAction))
                 {
-                    actionsStartupPermittedListBox.Items.Add(selectedAction); // Add action to the list box
+                    actionsPermittedListBox.Items.Add(selectedAction); // Add action to the list box
                     sbsamControlSaveButton.Enabled = true; // Enable save button
                 }
             }
@@ -507,9 +413,9 @@ public class StartupConfigForm : Form
 
     private void RemoveAction_Click(object sender, EventArgs e)
     {
-        if (actionsStartupPermittedListBox.SelectedItem != null)
+        if (actionsPermittedListBox.SelectedItem != null)
         {
-            actionsStartupPermittedListBox.Items.Remove(actionsStartupPermittedListBox.SelectedItem);
+            actionsPermittedListBox.Items.Remove(actionsPermittedListBox.SelectedItem);
             sbsamControlSaveButton.Enabled = true;
         }
     }
@@ -525,13 +431,13 @@ public class StartupConfigForm : Form
         if (result == DialogResult.Yes)
         {
             applicationsListBox.Items.Clear();
-            actionsStartupPermittedListBox.Items.Clear();
-            sbsam_StartupSettingsRBYes.Checked = false;
-            sbsam_StartupSettingsRBNo.Checked = false;
-            sbsam_StartupSettingsRBPrompt.Checked = true;
+            actionsPermittedListBox.Items.Clear();
+            sbsamStartupConfigRBYes.Checked = false;
+            sbsamStartupConfigRBNo.Checked = false;
+            sbsamStartupConfigRBPrompt.Checked = true;
             sbsamControlSaveButton.Enabled = false;
             applicationsRemoveButton.Enabled = false;
-            actionsStartupPermittedButtonRemove.Enabled = false;
+            actionsPermittedButtonRemove.Enabled = false;
         }
     }
 
@@ -553,7 +459,7 @@ public class StartupConfigForm : Form
 
     private void ActionListBox_SelectedIndexChanged(object sender, EventArgs e)
     {
-        actionsStartupPermittedButtonRemove.Enabled = actionsStartupPermittedListBox.SelectedItem != null;
+        actionsPermittedButtonRemove.Enabled = actionsPermittedListBox.SelectedItem != null;
     }
 }
 

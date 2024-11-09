@@ -301,10 +301,6 @@ public class StartupConfigForm : Form
         controlButtonsPanel.Controls.Add(sbsamControlSaveButton, 0, 0);
         controlButtonsPanel.Controls.Add(sbsamControlCloseButton, 1, 0);
         mainLayoutPanel.Controls.Add(controlButtonsPanel);
-
-        MessageBox.Show(mainLayoutPanel.Right.ToString()); 
-        MessageBox.Show(mainLayoutPanel.Left.ToString()); 
-
     }
 
 
@@ -373,7 +369,7 @@ public class StartupConfigForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+            //CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
         };
 
         // Define column styles for alignment

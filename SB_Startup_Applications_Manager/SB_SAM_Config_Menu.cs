@@ -136,10 +136,10 @@ public class LoadStartupConfigForm : Form
 
         // Add the control buttons. 
         AddApplicationControlButtons(mainLayoutPanel);
-
     }
 
     private TableLayoutPanel BuildCoreForm(Rectangle activeWindowRect) {
+        
         // Configure the form properties
         this.Text = "Startup Manager";
         this.Width = 500;
@@ -167,11 +167,10 @@ public class LoadStartupConfigForm : Form
     }
 
 
-    private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
-    {
+    private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel) {
+        
         // 2. Settings Buttons Panel
-        TableLayoutPanel settingsPanel = new TableLayoutPanel
-        {
+        TableLayoutPanel settingsPanel = new TableLayoutPanel {
             ColumnCount = 5,
             RowCount = 2,
             AutoSize = true,
@@ -189,11 +188,17 @@ public class LoadStartupConfigForm : Form
         settingsPanel.Controls.Add(sbsamControlAbout, 3, 1);
         settingsPanel.Controls.Add(sbsamControlTest, 4, 1);
 
-        mainLayoutPanel.Controls.Add(settingsPanel);
+        sbsamOptionsResetAll.Click += MainCanvasCloseButton_Click;
+        sbsamOptionsImport.Click += MainCanvasCloseButton_Click;
+        sbsamOptionsExport.Click += MainCanvasCloseButton_Click;
+        sbsamControlAbout.Click += MainCanvasCloseButton_Click;
+        sbsamControlTest.Click += MainCanvasCloseButton_Click;                                
 
+        mainLayoutPanel.Controls.Add(settingsPanel);
     }
 
     private void AddApplicationControlButtons(TableLayoutPanel mainLayoutPanel) { 
+        
         // Define Layout. 
         TableLayoutPanel controlButtonsPanel = new TableLayoutPanel {
             ColumnCount = 2,
@@ -214,16 +219,14 @@ public class LoadStartupConfigForm : Form
         mainLayoutPanel.Controls.Add(controlButtonsPanel);
     }
 
-
-    private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)
-    {
-        TableLayoutPanel applicationsPanel = new TableLayoutPanel
-        {
+    private void AddApplicationControls(TableLayoutPanel mainLayoutPanel) {
+        TableLayoutPanel applicationsPanel = new TableLayoutPanel {
             ColumnCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(0, 10, 0, 10)
         };
+
         applicationsListBox.Width = 300;
         applicationsPanel.Controls.Add(new Label { Text = "Applications to run at startup", AutoSize = true }, 0, 0);
         applicationsPanel.Controls.Add(applicationsListBox, 0, 1);
@@ -234,13 +237,19 @@ public class LoadStartupConfigForm : Form
         appButtons.Controls.Add(applicationsAddButton);
         appButtons.Controls.Add(applicationsRemoveButton);
         appButtons.Controls.Add(applicationsAddPathButton);
-        applicationsPanel.Controls.Add(appButtons, 1, 1);
 
+        applicationsListBox.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
+
+        applicationsAddButton.Click += AddApplication_Click;
+        applicationsAddPathButton.Click += EnterPathButton_Click;
+        applicationsRemoveButton.Click += RemoveApplication_Click;
+
+        applicationsPanel.Controls.Add(appButtons, 1, 1);
         mainLayoutPanel.Controls.Add(applicationsPanel);
     }
 
-    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton)
-    {
+    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton) {
+        
         TableLayoutPanel actionsPanel = new TableLayoutPanel {
             ColumnCount = 2,
             AutoSize = true,
@@ -265,8 +274,8 @@ public class LoadStartupConfigForm : Form
         // Finalise. 
         mainLayoutPanel.Controls.Add(actionsPanel);
     }
-    private void AddStartupConfigurationControls(TableLayoutPanel mainLayoutPanel)
-    {
+
+    private void AddStartupConfigurationControls(TableLayoutPanel mainLayoutPanel) {
         // Create a GroupBox to hold the startup options section
         GroupBox startupOptionsGroup = new GroupBox
         {
@@ -315,39 +324,29 @@ public class LoadStartupConfigForm : Form
     private void AddApplication_Click(object sender, EventArgs e)
     {
         // Run the file dialog in a separate thread
-        Thread fileDialogThread = new Thread(() =>
-        {
-            try
-            {
-                using (OpenFileDialog fileDialog = new OpenFileDialog())
-                {
+        Thread fileDialogThread = new Thread(() => {
+            try {
+                using (OpenFileDialog fileDialog = new OpenFileDialog()) {
                     fileDialog.Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
                     fileDialog.Title = "Select an Application File";
 
-                    if (fileDialog.ShowDialog(this) == DialogResult.OK)
-                    {
+                    if (fileDialog.ShowDialog(this) == DialogResult.OK) {
                         string selectedFile = fileDialog.FileName;
                         this.Invoke(
-                            new Action(() =>
-                            {
-                                if (!applicationsListBox.Items.Contains(selectedFile))
-                                {
+                            new Action(() => {
+                                if (!applicationsListBox.Items.Contains(selectedFile)) {
                                     applicationsListBox.Items.Add(selectedFile);
                                     sbsamControlSaveButton.Enabled = true;
                                 }
-                                else
-                                {
-                                    MessageBox.Show(
-                                        "This application file has already been added."
-                                    );
+                                else {
+                                    MessageBox.Show("This application file has already been added.");
                                 }
                             })
                         );
                     }
                 }
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 MessageBox.Show($"An error occurred while selecting the file:\n{ex.Message}");
             }
         });
@@ -391,10 +390,8 @@ public class LoadStartupConfigForm : Form
         }
     }
 
-    private void RemoveApplication_Click(object sender, EventArgs e)
-    {
-        if (applicationsListBox.SelectedItem != null)
-        {
+    private void RemoveApplication_Click(object sender, EventArgs e) {
+        if (applicationsListBox.SelectedItem != null) {
             applicationsListBox.Items.Remove(applicationsListBox.SelectedItem);
             sbsamControlSaveButton.Enabled = true;
         }
@@ -419,8 +416,7 @@ public class LoadStartupConfigForm : Form
 
     private void RemoveAction_Click(object sender, EventArgs e)
     {
-        if (actionsPermittedListBox.SelectedItem != null)
-        {
+        if (actionsPermittedListBox.SelectedItem != null) {
             actionsPermittedListBox.Items.Remove(actionsPermittedListBox.SelectedItem);
             sbsamControlSaveButton.Enabled = true;
         }
@@ -456,8 +452,7 @@ public class LoadStartupConfigForm : Form
         this.Close();
     }
 
-    private void ApplicationListBox_SelectedIndexChanged(object sender, EventArgs e)
-    {
+    private void ApplicationListBox_SelectedIndexChanged(object sender, EventArgs e) {
         applicationsRemoveButton.Enabled = applicationsListBox.SelectedItem != null;
     }
 

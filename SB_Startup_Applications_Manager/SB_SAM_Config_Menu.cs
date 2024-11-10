@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Text.Json;
 
 public class CPHInline
 {
@@ -45,25 +46,30 @@ public class CPHInline
             return false;
         }
 
-        // Enable visual styles for the application
-        Application.EnableVisualStyles();
+       Thread staThread = new Thread(() => {
 
-        // Load the global action list
-        List<ActionData> actionList = CPH.GetActions();
+            // Enable visual styles for the application
+            Application.EnableVisualStyles();
 
-        // Create an instance of StartupConfigForm, passing the dimensions of the active window
-        if (mainFormInstance == null || mainFormInstance.IsDisposed)
-        {
-            // Create a new instance of StartupConfigForm if no form is open
-            mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
-            Application.Run(mainFormInstance);
-        }
-        else
-        {
-            // Bring the existing form instance to the front
-            mainFormInstance.BringToFront();
-        }
+            // Load the global action list
+            List<ActionData> actionList = CPH.GetActions();
 
+            // Create an instance of StartupConfigForm, passing the dimensions of the active window
+            if (mainFormInstance == null || mainFormInstance.IsDisposed)
+            {
+                // Create a new instance of StartupConfigForm if no form is open
+                mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
+                Application.Run(mainFormInstance);
+            }
+            else
+            {
+                // Bring the existing form instance to the front
+                mainFormInstance.BringToFront();
+            }
+        });
+
+        staThread.SetApartmentState(ApartmentState.STA);
+        staThread.Start();
         return true;
     }
 }
@@ -77,14 +83,9 @@ public class LoadStartupConfigForm : Form
     private RadioButton radioStartupConfigNo = new RadioButton {Text = "No", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
     private RadioButton radioStartupConfigPrompt = new RadioButton {Text = "Prompt", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
     private Label lblStartupConfigDelay = new Label {Text = "Delay (In seconds)", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft};
-    private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown {
-        Width = 40,
-        Minimum = 0,
-        Maximum = 30,
-        Value = 2,
-        Anchor = AnchorStyles.Left,
-        Margin = new Padding(2, 0, 0, 0)
-    };
+    private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown {Width = 40, Minimum = 0, Maximum = 30, Value = 2, Anchor = AnchorStyles.Left, Margin = new Padding(2, 0, 0, 0)};
+
+    private int indexOfListItem;
 
     // Application Start-up IO's.
     private ListBox lstApplications = new ListBox {Width = 250, Height = 100};
@@ -130,6 +131,11 @@ public class LoadStartupConfigForm : Form
         AddApplicationControls(mainLayoutPanel);
         AddActionControls(mainLayoutPanel, "Actions to run at startup", lstActionsPermitted, btnAddActionPermitted, btnRemoveActionPermitted, AddActionPermitted_SelIndhanged, AddActionPermitted_Click, RemoveActionPermitted_Click);
         AddActionControls(mainLayoutPanel, "Actions to block running at startup", lstActionsBlocked, btnAddActionBlocked, btnRemoveActionBlocked, AddActionBlocked_SelIndhanged, AddActionBlocked_Click, RemoveActionBlocked_Click);
+
+        // Enable reordering for each ListBox
+        EnableListBoxOrdering(lstApplications);
+        EnableListBoxOrdering(lstActionsPermitted);
+        EnableListBoxOrdering(lstActionsBlocked);
 
         // Add the options buttons. 
         AddStartupConfigurationControls(mainLayoutPanel);
@@ -328,57 +334,55 @@ public class LoadStartupConfigForm : Form
         mainLayoutPanel.Controls.Add(startupOptionsGroup);
     }
 
-
-
     private void AddApplication_Click(object sender, EventArgs e)
     {
-        // Run the file dialog in a separate thread
+        // Run the file dialog in a separate STA thread
         Thread fileDialogThread = new Thread(() => {
-            try {
+            try             {
                 using (OpenFileDialog fileDialog = new OpenFileDialog()) {
                     fileDialog.Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
                     fileDialog.Title = "Select an Application File";
 
                     if (fileDialog.ShowDialog(this) == DialogResult.OK) {
-                        string selectedFile = fileDialog.FileName;
-                        this.Invoke(
-                            new Action(() => {
-                                if (!lstApplications.Items.Contains(selectedFile)) {
-                                    lstApplications.Items.Add(selectedFile);
-                                    btnSaveForm.Enabled = true;
-                                }
-                                else {
-                                    MessageBox.Show("This application file has already been added.");
-                                }
-                            })
-                        );
+                        // Create an instance of ApplicationFileDetails to hold file name and path
+                        ApplicationFileDetails selectedFile = new ApplicationFileDetails(fileDialog.FileName);
+
+                        // Update the UI on the main thread using Invoke
+                        this.Invoke(new Action(() => {
+                            // Check if the file (by full path) is already in the list
+                            if (!lstApplications.Items.Cast<ApplicationFileDetails>().Any(f => f.FullPath == selectedFile.FullPath)) {
+                                lstApplications.Items.Add(selectedFile);
+                                btnSaveForm.Enabled = true;
+                            }
+                            else {
+                                MessageBox.Show("This application file has already been added.");
+                            }
+                        }));
                     }
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 MessageBox.Show($"An error occurred while selecting the file:\n{ex.Message}");
             }
         });
 
+        // Set the apartment state to STA for compatibility with file dialogs
         fileDialogThread.SetApartmentState(ApartmentState.STA);
         fileDialogThread.Start();
     }
 
+
     private void AddApplicationPath_Click(object sender, EventArgs e)
     {
-        using (PathInputDialog pathDialog = new PathInputDialog(this))
-        {
-            if (pathDialog.ShowDialog(this) == DialogResult.OK)
-            {
-                string pathToAdd = pathDialog.EnteredPath;
+        using (PathInputDialog pathDialog = new PathInputDialog(this)) {
+            if (pathDialog.ShowDialog(this) == DialogResult.OK) {
+                string pathToAdd = pathDialog.EnteredPath; 
 
-                if (!string.IsNullOrWhiteSpace(pathToAdd))
-                {
-                    if (File.Exists(pathToAdd) || Directory.Exists(pathToAdd))
-                    {
-                        if (!lstApplications.Items.Contains(pathToAdd))
-                        {
-                            lstApplications.Items.Add(pathToAdd);
+                if (!string.IsNullOrWhiteSpace(pathToAdd)) {
+                    if (File.Exists(pathToAdd) || Directory.Exists(pathToAdd)) {
+                        if (!lstApplications.Items.Contains(pathToAdd)) {
+                            lstApplications.Items.Add(pathToAdd); 
                             btnSaveForm.Enabled = true;
                         }
                         else
@@ -489,7 +493,56 @@ public class LoadStartupConfigForm : Form
     private void MainCanvasCloseButton_Click(object sender, EventArgs e) {
         this.Close();
     }
+
+    private void EnableListBoxOrdering(ListBox listBox) {
+        listBox.MouseDown += ListBox_MouseDown;
+        listBox.MouseMove += ListBox_MouseMove;
+        listBox.DragOver += ListBox_DragOver;
+        listBox.DragDrop += ListBox_DragDrop;
+        listBox.AllowDrop = true; // Enable dropping items in the ListBox
+    }
+
+    // Start dragging the item if the mouse is pressed down
+    private void ListBox_MouseDown(object sender, MouseEventArgs mouseEventArgs) {
+        ListBox listBox = (ListBox)sender;
+        indexOfListItem = listBox.IndexFromPoint(mouseEventArgs.X, mouseEventArgs.Y);
+    }
+
+    // Handle moving the item if the mouse is dragged
+    private void ListBox_MouseMove(object sender, MouseEventArgs mouseEventArgs) {
+        ListBox listBox = (ListBox)sender;
+        
+        // Start dragging if the left button is held down
+        if (mouseEventArgs.Button == MouseButtons.Left && indexOfListItem >= 0) {
+            listBox.DoDragDrop(listBox.Items[indexOfListItem], DragDropEffects.Move);
+        }
+    }
+
+    // Allow item to be dropped in new position
+    private void ListBox_DragOver(object sender, DragEventArgs dragEventArgs) {
+        dragEventArgs.Effect = DragDropEffects.Move;
+    }
+
+    // Reorder the item when dropped in a new position
+    private void ListBox_DragDrop(object sender, DragEventArgs dragEventArgs) {
+        ListBox listBox = (ListBox)sender;
+        
+        // Get the index of the drop target
+        int indexOfItemUnderMouseToDrop = listBox.IndexFromPoint(listBox.PointToClient(new Point(dragEventArgs.X, dragEventArgs.Y)));
+        
+        // Move the dragged item to the drop position if it's valid and different
+        if (indexOfItemUnderMouseToDrop != ListBox.NoMatches && indexOfItemUnderMouseToDrop != indexOfListItem) {
+            object draggedItem = listBox.Items[indexOfListItem];
+            listBox.Items.RemoveAt(indexOfListItem);
+            listBox.Items.Insert(indexOfItemUnderMouseToDrop, draggedItem);
+
+            // Update selection to indicate new position
+            listBox.SetSelected(indexOfItemUnderMouseToDrop, true);
+        }
+    }
 }
+
+
 
 public class PathInputDialog : Form {
     private TextBox pathTextBox;
@@ -564,67 +617,48 @@ public class PathInputDialog : Form {
 
 public class ActionManagerForm : Form
 {
-    private ListBox actionListBox = new ListBox
-    {
-        Left = 20,
-        Top = 20,
-        Width = 400,
-        Height = 300,
-    };
-    private Button addActionToListButton = new Button
-    {
-        Left = 430,
-        Top = 20,
-        Width = 120,
-        Text = "Add Action",
-    };
-    private Button cancelAddButton = new Button
-    {
-        Left = 430,
-        Top = 60,
-        Width = 120,
-        Text = "Cancel",
-    };
+    private ListBox lstAMFListBox = new ListBox {Left = 20, Top = 20, Width = 400, Height = 300,};
+    private Button btnAMFAddItem = new Button {Left = 430, Top = 20, Width = 120, Text = "Add Action",};
+    private Button btnAMFRemoveButton = new Button {Left = 430, Top = 40, Width = 120,Text = "Cancel",};
     private List<ActionData> actionDataList;
 
     public string SelectedAction { get; private set; }
 
-    public ActionManagerForm(List<ActionData> actionData)
-    {
+    public ActionManagerForm(List<ActionData> actionData) {
         this.Text = "Actions To Manage";
         this.Width = 600;
         this.Height = 400;
-        this.Controls.Add(actionListBox);
-        this.Controls.Add(addActionToListButton);
-        this.Controls.Add(cancelAddButton);
+        this.Controls.Add(lstAMFListBox);
+        this.Controls.Add(btnAMFAddItem);
+        this.Controls.Add(btnAMFRemoveButton);
 
         // Initialize actionDataList with the passed-in actionData
         actionDataList = actionData;
 
-        addActionToListButton.Click += AddActionToListButton_Click;
-        cancelAddButton.Click += CancelButton_Click;
+        btnAMFAddItem.Click += AddActionToListButton_Click;
+        btnAMFRemoveButton.Click += CancelButton_Click;
         LoadActions();
     }
 
     private void LoadActions()
     {
         // Clear the action list box and populate it with actions
-        actionListBox.Items.Clear(); // Clear previous items
+        lstAMFListBox.Items.Clear(); // Clear previous items
 
         // Loop through each action in the list and display it
         foreach (var action in actionDataList)
         {
             // Format the display string for each action
             string actionDisplay = $"{action.Name} - {(action.Enabled ? "Enabled" : "Disabled")}";
-            actionListBox.Items.Add(actionDisplay); // Add to the list box
+            lstAMFListBox.Items.Add(actionDisplay); // Add to the list box
         }
     }
 
     private void AddActionToListButton_Click(object sender, EventArgs e)
     {
-        if (actionListBox.SelectedItem != null)
+        if (lstAMFListBox.SelectedItem != null)
         {
-            string selectedActionDisplay = actionListBox.SelectedItem.ToString();
+            string selectedActionDisplay = lstAMFListBox.SelectedItem.ToString();
             SelectedAction = selectedActionDisplay.Split('-')[0].Trim(); // Extract the action name
 
             // Close the form and set DialogResult to OK
@@ -655,5 +689,98 @@ public class ActionManagerForm : Form
         var action = actionDataList.FirstOrDefault(a => a.Name == actionName);
         if (action != null)
             action.Enabled = false;
+    }
+}
+
+
+
+
+
+
+
+
+public class ApplicationFileDetails
+{
+    public string FileName { get; set; }    // Only the file name for display
+    public string FullPath { get; set; }    // Full path for access
+
+    public ApplicationFileDetails(string fullPath) {
+        FullPath = fullPath;
+        FileName = Path.GetFileName(fullPath); // Extract file name from full path
+    }
+
+    public override string ToString() {
+        return FileName; // Display the file name in the ListBox
+    }
+}
+
+
+
+
+
+
+public class StartupManagerSettings
+{
+    public LoadOnStartupConfig LoadOnStartup { get; set; }
+    public List<ApplicationConfig> Applications { get; set; }
+    public ActionConfigs Actions { get; set; }
+    public UserSettingsConfig UserSettings { get; set; }
+}
+
+public class LoadOnStartupConfig
+{
+    public bool Enabled { get; set; }
+    public string Mode { get; set; } // Options: "Yes", "No", "Prompt"
+    public int DelayInSeconds { get; set; }
+}
+
+public class ApplicationConfig
+{
+    public string Path { get; set; }
+    public bool IsEnabled { get; set; }
+    public int Order { get; set; }
+}
+
+public class ActionConfigs
+{
+    public List<ActionConfig> Permitted { get; set; }
+    public List<ActionConfig> Blocked { get; set; }
+}
+
+public class ActionConfig
+{
+    public string Name { get; set; }
+    public bool IsEnabled { get; set; }
+    public int Order { get; set; }
+}
+
+public class UserSettingsConfig
+{
+    public bool ResetConfig { get; set; }
+    public ExportImportConfig ExportSettings { get; set; }
+    public ExportImportConfig ImportSettings { get; set; }
+    public DateTime LastSaveTime { get; set; }
+}
+
+public class ExportImportConfig
+{
+    public string Path { get; set; }
+}
+
+public static class UserSettingsControl {
+    public static void SaveStartupManagerSettings(StartupManagerSettings settings, string filePath) {
+        try {
+            // Serialize the settings object to JSON format
+            string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+
+            // Write the JSON to the specified file path
+            File.WriteAllText(filePath, json);
+
+            Console.WriteLine("Settings saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while saving settings: {ex.Message}");
+        }
     }
 }

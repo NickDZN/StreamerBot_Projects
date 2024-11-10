@@ -93,6 +93,11 @@ public class LoadStartupConfigForm : Form
     private Button btnAddApplicationPath = new Button {Width = 120, Text = "Add Path"};
     private Button btnRemoveApplication = new Button {Width = 120, Text = "Remove Application", Enabled = false};
 
+    // Define the buttons with text symbols for arrows
+    private Button btnMoveUp = new Button { Width = 20, Height = 20, Text = "^", Font = new Font("Arial", 9, FontStyle.Bold),  };
+    private Button btnMoveDown = new Button { Width = 20, Height = 20, Text = "↓", Font = new Font("Arial", 9, FontStyle.Bold) };
+
+
     // Actions Startup Permitted IO's
     private ListBox lstActionsPermitted = new ListBox {Width = 250, Height = 100};
     private Button btnAddActionPermitted = new Button {Width = 120, Text = "Add Action"};
@@ -229,35 +234,67 @@ public class LoadStartupConfigForm : Form
 
     // Application list and controls. 
     private void AddApplicationControls(TableLayoutPanel mainLayoutPanel) {
-        TableLayoutPanel applicationsPanel = new TableLayoutPanel {
+           
+        // Main applications panel with explicit row heights
+        TableLayoutPanel tpanelApplications = new TableLayoutPanel {
             ColumnCount = 2,
+            RowCount = 3,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(0, 10, 0, 10)
+            Padding = new Padding(0)
         };
 
+        // Add Label. 
+        tpanelApplications.Controls.Add(new Label { Text = "Applications to run at startup", AutoSize = true }, 0, 0);
+
+        // Configure and add list box. 
         lstApplications.Width = 300;
-        applicationsPanel.Controls.Add(new Label { Text = "Applications to run at startup", AutoSize = true }, 0, 0);
-        applicationsPanel.Controls.Add(lstApplications, 0, 1);
-        applicationsPanel.SetRowSpan(lstApplications, 2);
+        lstApplications.Margin = new Padding(0);
+        lstApplications.Padding = new Padding(0);
+        tpanelApplications.Controls.Add(lstApplications, 0, 1);
 
-        // Buttons for application list
-        TableLayoutPanel appButtons = new TableLayoutPanel { ColumnCount = 1, AutoSize = true };
-        appButtons.Controls.Add(btnAddApplication);
-        appButtons.Controls.Add(btnRemoveApplication);
-        appButtons.Controls.Add(btnAddApplicationPath);
+        // Create panel for main buttons. 
+        TableLayoutPanel tpanelApplicationContols = new TableLayoutPanel {
+            ColumnCount = 1, 
+            AutoSize = true, 
+            Margin = new Padding(5, 0, 0, 0),
+            Padding = new Padding(0)
+        };
 
-        // Handle selecting an item event. 
+        // Add buttons to the panel. 
+        tpanelApplicationContols.Controls.Add(btnAddApplication);
+        tpanelApplicationContols.Controls.Add(btnRemoveApplication);
+        tpanelApplicationContols.Controls.Add(btnAddApplicationPath);
+
+        // Create arrow buttons panel. Flow Layout for easy HAlign. 
+        FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel {
+            FlowDirection = FlowDirection.LeftToRight,
+            Anchor = AnchorStyles.Right,
+            AutoSize = true,
+            Margin = new Padding(0),
+            Padding = new Padding(0)
+        };
+
+        // Create the arrow buttons. 
+        btnMoveUp.Margin = new Padding(0, 0, 1, 0);
+        btnMoveDown.Margin = new Padding(1, 0, 0, 0);
+        fpanelApplicationArrows.Controls.Add(btnMoveUp);
+        fpanelApplicationArrows.Controls.Add(btnMoveDown);
+
+        // Add tpanelApplicationContols to the right of lstApplications
+        tpanelApplications.Controls.Add(tpanelApplicationContols, 1, 1);
+        tpanelApplications.SetRowSpan(tpanelApplicationContols, 2);
+
+        // Add arrowButtonsPanel below the ListBox, centered
+        tpanelApplications.Controls.Add(fpanelApplicationArrows, 0, 2);
+
+        // Attach event handlers.   
         lstApplications.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
-
-        // Handle buttons clicked events.
         btnAddApplication.Click += AddApplication_Click;
         btnAddApplicationPath.Click += AddApplicationPath_Click;
         btnRemoveApplication.Click += RemoveApplication_Click;
 
-        // Display Canvas.
-        applicationsPanel.Controls.Add(appButtons, 1, 1);
-        mainLayoutPanel.Controls.Add(applicationsPanel);
+        mainLayoutPanel.Controls.Add(tpanelApplications);
     }
 
     //Actions allowed list and controls. 
@@ -298,13 +335,13 @@ public class LoadStartupConfigForm : Form
         GroupBox startupOptionsGroup = new GroupBox {
             Text = "Load Applications on Startup",
             Width = 400,
-            Height = 80
+            Height = 50
         };
 
         // Create a TableLayoutPanel with 3 columns and 2 rows to align options
         TableLayoutPanel startupOptionsPanel = new TableLayoutPanel {
-            ColumnCount = 3,
-            RowCount = 6,
+            ColumnCount = 6,
+            RowCount = 3,
             Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -372,9 +409,7 @@ public class LoadStartupConfigForm : Form
         fileDialogThread.Start();
     }
 
-
-    private void AddApplicationPath_Click(object sender, EventArgs e)
-    {
+    private void AddApplicationPath_Click(object sender, EventArgs e) {
         using (PathInputDialog pathDialog = new PathInputDialog(this)) {
             if (pathDialog.ShowDialog(this) == DialogResult.OK) {
                 string pathToAdd = pathDialog.EnteredPath; 
@@ -382,21 +417,20 @@ public class LoadStartupConfigForm : Form
                 if (!string.IsNullOrWhiteSpace(pathToAdd)) {
                     if (File.Exists(pathToAdd) || Directory.Exists(pathToAdd)) {
                         if (!lstApplications.Items.Contains(pathToAdd)) {
-                            lstApplications.Items.Add(pathToAdd); 
+                            ApplicationFileDetails selectedFile = new ApplicationFileDetails(pathToAdd);
+                            
+                            lstApplications.Items.Add(selectedFile); 
                             btnSaveForm.Enabled = true;
                         }
-                        else
-                        {
+                        else {
                             MessageBox.Show("This application path has already been added.");
                         }
                     }
-                    else
-                    {
+                    else {
                         MessageBox.Show("The specified path does not exist.");
                     }
                 }
-                else
-                {
+                else {
                     MessageBox.Show("Please enter a valid application path.");
                 }
             }

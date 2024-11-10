@@ -23,14 +23,13 @@ public class CPHInline
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
-    public bool Execute()
-    {
+    public bool Execute() {
+        
         // Attempt to get the handle of the currently active window
         IntPtr activeWindowHandle = GetForegroundWindow();
 
         // Check if the window was found
-        if (activeWindowHandle == IntPtr.Zero)
-        {
+        if (activeWindowHandle == IntPtr.Zero) {
             MessageBox.Show("No active window found.");
             return false;
         }
@@ -40,30 +39,27 @@ public class CPHInline
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
         // Get the dimensions of the active window
-        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
-        {
+        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect)) {
             MessageBox.Show("Failed to get window dimensions.");
             return false;
         }
 
-       Thread staThread = new Thread(() => {
+        // Start new thread for the form. 
+        Thread staThread = new Thread(() => {
 
-            // Enable visual styles for the application
+            // Enable visual styles for the form
             Application.EnableVisualStyles();
 
-            // Load the global action list
+            // Get the global action list
             List<ActionData> actionList = CPH.GetActions();
 
-            // Create an instance of StartupConfigForm, passing the dimensions of the active window
-            if (mainFormInstance == null || mainFormInstance.IsDisposed)
-            {
-                // Create a new instance of StartupConfigForm if no form is open
-                mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList); // Pass the global actions list
+            // Create a new instance of StartupConfigForm if no form is open
+            if (mainFormInstance == null || mainFormInstance.IsDisposed) {                
+                mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
                 Application.Run(mainFormInstance);
             }
-            else
-            {
-                // Bring the existing form instance to the front
+            // Bring the existing form instance to the front
+            else {                
                 mainFormInstance.BringToFront();
             }
         });
@@ -293,6 +289,8 @@ public class LoadStartupConfigForm : Form
         btnAddApplication.Click += AddApplication_Click;
         btnAddApplicationPath.Click += AddApplicationPath_Click;
         btnRemoveApplication.Click += RemoveApplication_Click;
+        btnMoveUp.Click += btnApplicationsUp_Click;
+        btnMoveDown.Click += btnApplicationsDown_Click;
 
         mainLayoutPanel.Controls.Add(tpanelApplications);
     }
@@ -533,7 +531,7 @@ public class LoadStartupConfigForm : Form
         listBox.MouseMove += ListBox_MouseMove;
         listBox.DragOver += ListBox_DragOver;
         listBox.DragDrop += ListBox_DragDrop;
-        listBox.AllowDrop = true; // Enable dropping items in the ListBox
+        listBox.AllowDrop = true;
     }
 
     // Start dragging the item if the mouse is pressed down
@@ -549,6 +547,46 @@ public class LoadStartupConfigForm : Form
         // Start dragging if the left button is held down
         if (mouseEventArgs.Button == MouseButtons.Left && indexOfListItem >= 0) {
             listBox.DoDragDrop(listBox.Items[indexOfListItem], DragDropEffects.Move);
+        }
+    }
+
+    private void btnApplicationsUp_Click(object sender, EventArgs clickEventArgs) {
+
+        ListBox listBox = lstApplications;
+
+        // Ensure an item is selected and it's not the first item
+        if (listBox.SelectedIndex > 0) {
+            int selectedIndex = listBox.SelectedIndex;
+        
+            // Store the item to move
+            var item = listBox.Items[selectedIndex];
+        
+            // Remove it and insert it at the new position
+            listBox.Items.RemoveAt(selectedIndex);
+            listBox.Items.Insert(selectedIndex - 1, item);
+        
+            // Set the moved item as selected
+            listBox.SelectedIndex = selectedIndex - 1;
+        }
+    }
+
+    private void btnApplicationsDown_Click(object sender, EventArgs clickEventArgs) {
+        // Reference the ListBox directly, assuming it's named lstApplications
+        ListBox listBox = lstApplications;
+
+        // Ensure an item is selected and it's not the last item
+        if (listBox.SelectedIndex < listBox.Items.Count - 1 && listBox.SelectedIndex != -1) {
+            int selectedIndex = listBox.SelectedIndex;
+            
+            // Store the item to move
+            var item = listBox.Items[selectedIndex];
+            
+            // Remove it and insert it at the new position
+            listBox.Items.RemoveAt(selectedIndex);
+            listBox.Items.Insert(selectedIndex + 1, item);
+            
+            // Set the moved item as selected
+            listBox.SelectedIndex = selectedIndex + 1;
         }
     }
 

@@ -128,8 +128,8 @@ public class LoadStartupConfigForm : Form
 
         // Add the list box sections. 
         AddApplicationControls(mainLayoutPanel);
-        AddActionControls(mainLayoutPanel, "Actions to run at startup", lstActionsPermitted, btnAddActionPermitted, btnRemoveActionPermitted, ActionListBox_SelectedIndexChanged, AddAction_Click, RemoveAction_Click);
-        AddActionControls(mainLayoutPanel, "Actions to block running at startup", lstActionsBlocked, btnAddActionBlocked, btnRemoveActionBlocked);
+        AddActionControls(mainLayoutPanel, "Actions to run at startup", lstActionsPermitted, btnAddActionPermitted, btnRemoveActionPermitted, AddActionPermitted_SelIndhanged, AddActionPermitted_Click, RemoveActionPermitted_Click);
+        AddActionControls(mainLayoutPanel, "Actions to block running at startup", lstActionsBlocked, btnAddActionBlocked, btnRemoveActionBlocked, AddActionBlocked_SelIndhanged, AddActionBlocked_Click, RemoveActionBlocked_Click);
 
         // Add the options buttons. 
         AddStartupConfigurationControls(mainLayoutPanel);
@@ -246,7 +246,7 @@ public class LoadStartupConfigForm : Form
 
         // Handle buttons clicked events.
         btnAddApplication.Click += AddApplication_Click;
-        btnAddApplicationPath.Click += EnterPathButton_Click;
+        btnAddApplicationPath.Click += AddApplicationPath_Click;
         btnRemoveApplication.Click += RemoveApplication_Click;
 
         // Display Canvas.
@@ -255,7 +255,7 @@ public class LoadStartupConfigForm : Form
     }
 
     //Actions allowed list and controls. 
-    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton, EventHandler ListBoxSelected EventHandler addButtonClick, EventHandler removeButtonClick) {
+    private void AddActionControls(TableLayoutPanel mainLayoutPanel, string title, ListBox listBox, Button addButton, Button removeButton, EventHandler ListBoxSelected, EventHandler addButtonClick, EventHandler removeButtonClick) {
         
         TableLayoutPanel actionsPanel = new TableLayoutPanel {
             ColumnCount = 2,
@@ -311,9 +311,9 @@ public class LoadStartupConfigForm : Form
         startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         // Add radio buttons to the first row
-        startupOptionsPanel.Controls.Add(radioStartupConfigYes, 0, 0);    // Column 0, Row 0
-        startupOptionsPanel.Controls.Add(radioStartupConfigNo, 1, 0);     // Column 1, Row 0
-        startupOptionsPanel.Controls.Add(radioStartupConfigPrompt, 2, 0); // Column 2, Row 0
+        startupOptionsPanel.Controls.Add(radioStartupConfigYes, 0, 0);    
+        startupOptionsPanel.Controls.Add(radioStartupConfigNo, 1, 0);     
+        startupOptionsPanel.Controls.Add(radioStartupConfigPrompt, 2, 0); 
 
         // Add the delay label to the second row, spanning the first two columns
         startupOptionsPanel.Controls.Add(lblStartupConfigDelay, 4, 0);
@@ -326,7 +326,6 @@ public class LoadStartupConfigForm : Form
 
         // Add the GroupBox to the main layout panel
         mainLayoutPanel.Controls.Add(startupOptionsGroup);
-
     }
 
 
@@ -411,8 +410,6 @@ public class LoadStartupConfigForm : Form
         btnRemoveApplication.Enabled = lstApplications.SelectedItem != null;
     }
 
-
-
     private void AddActionPermitted_SelIndhanged(object sender, EventArgs e) {
         btnRemoveActionPermitted.Enabled = lstActionsPermitted.SelectedItem != null;
     }
@@ -437,7 +434,7 @@ public class LoadStartupConfigForm : Form
     }
 
     private void AddActionBlocked_SelIndhanged(object sender, EventArgs e) {
-        btnRemoveActionPermitted.Enabled = lstActionsPermitted.SelectedItem != null;
+        btnRemoveActionBlocked.Enabled = lstActionsBlocked.SelectedItem != null;
     }
 
     private void AddActionBlocked_Click(object sender, EventArgs e) {
@@ -445,7 +442,7 @@ public class LoadStartupConfigForm : Form
             if (actionManagerDialog.ShowDialog(this) == DialogResult.OK) {
                 string selectedAction = actionManagerDialog.SelectedAction; 
                 if (!string.IsNullOrWhiteSpace(selectedAction)) {
-                    lstActionsPermitted.Items.Add(selectedAction);
+                    lstActionsBlocked.Items.Add(selectedAction);
                     btnSaveForm.Enabled = true;
                 }
             }
@@ -453,8 +450,8 @@ public class LoadStartupConfigForm : Form
     }
 
     private void RemoveActionBlocked_Click(object sender, EventArgs e) {
-        if (lstActionsPermitted.SelectedItem != null) {
-            lstActionsPermitted.Items.Remove(lstActionsPermitted.SelectedItem);
+        if (lstActionsBlocked.SelectedItem != null) {
+            lstActionsBlocked.Items.Remove(lstActionsBlocked.SelectedItem);
             btnSaveForm.Enabled = true;
         }
     }
@@ -470,12 +467,17 @@ public class LoadStartupConfigForm : Form
         if (result == DialogResult.Yes) {
             lstApplications.Items.Clear();
             lstActionsPermitted.Items.Clear();
+            lstActionsBlocked.Items.Clear();
+
             radioStartupConfigYes.Checked = false;
             radioStartupConfigNo.Checked = false;
             radioStartupConfigPrompt.Checked = true;
+
             btnSaveForm.Enabled = false;
             btnRemoveApplication.Enabled = false;
             btnRemoveActionPermitted.Enabled = false;
+            btnRemoveActionBlocked.Enabled = false;
+            numupdwnStartupConfigDelay.Value = 2;
         }
     }
 
@@ -489,37 +491,32 @@ public class LoadStartupConfigForm : Form
     }
 }
 
-public class PathInputDialog : Form
-{
+public class PathInputDialog : Form {
     private TextBox pathTextBox;
-    private Button okButton;
-    private Button cancelButton;
-
+    private Button btnPidOkay;
+    private Button btnPidCancel;
     public string EnteredPath => pathTextBox.Text;
-
     private const string PlaceholderText = "Enter or paste the application path here";
 
-    public PathInputDialog(Form ownerForm)
-    {
+    public PathInputDialog(Form ownerForm) {
         Text = "Enter Application Path";
         Width = 400;
         Height = 150;
 
         StartPosition = FormStartPosition.Manual;
-        Location = new Point(
+        Location = new Point (
             ownerForm.Left + (ownerForm.Width - Width) / 2,
             ownerForm.Top + (ownerForm.Height - Height) / 2
         );
 
-        Label promptLabel = new Label
-        {
-            Text = "Enter or paste the path of the application:",
+        Label promptLabel = new Label {
+            Text = "Enter the path of the application:",
             Left = 10,
             Top = 10,
             Width = 360,
         };
-        pathTextBox = new TextBox
-        {
+
+        pathTextBox = new TextBox {
             Left = 10,
             Top = 40,
             Width = 360,
@@ -531,53 +528,34 @@ public class PathInputDialog : Form
         pathTextBox.GotFocus += RemovePlaceholder;
         pathTextBox.LostFocus += SetPlaceholder;
 
-        okButton = new Button
-        {
-            Text = "OK",
-            Left = 220,
-            Width = 75,
-            Top = 70,
-            DialogResult = DialogResult.OK,
-        };
-        cancelButton = new Button
-        {
-            Text = "Cancel",
-            Left = 300,
-            Width = 75,
-            Top = 70,
-            DialogResult = DialogResult.Cancel,
-        };
+        btnPidOkay = new Button {Text = "OK", Left = 220, Width = 75, Top = 70, DialogResult = DialogResult.OK, };
+        btnPidCancel = new Button {Text = "Cancel", Left = 300, Width = 75, Top = 70, DialogResult = DialogResult.Cancel, };
 
-        okButton.Click += (sender, e) =>
-        {
+        btnPidOkay.Click += (sender, e) => {
             DialogResult = DialogResult.OK;
             Close();
         };
-        cancelButton.Click += (sender, e) =>
-        {
+
+        btnPidCancel.Click += (sender, e) => {
             DialogResult = DialogResult.Cancel;
             Close();
         };
 
         Controls.Add(promptLabel);
         Controls.Add(pathTextBox);
-        Controls.Add(okButton);
-        Controls.Add(cancelButton);
+        Controls.Add(btnPidOkay);
+        Controls.Add(btnPidCancel);
     }
 
-    private void RemovePlaceholder(object sender, EventArgs e)
-    {
-        if (pathTextBox.Text == PlaceholderText)
-        {
+    private void RemovePlaceholder(object sender, EventArgs e) {
+        if (pathTextBox.Text == PlaceholderText) {
             pathTextBox.Text = "";
             pathTextBox.ForeColor = Color.Black;
         }
     }
 
-    private void SetPlaceholder(object sender, EventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(pathTextBox.Text))
-        {
+    private void SetPlaceholder(object sender, EventArgs e) {
+        if (string.IsNullOrWhiteSpace(pathTextBox.Text)) {
             pathTextBox.Text = PlaceholderText;
             pathTextBox.ForeColor = Color.Gray;
         }

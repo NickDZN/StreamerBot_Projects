@@ -427,7 +427,7 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Padding = new Padding(0),
-			Margin = new Padding(0, 0, 0, 10),
+			Margin = new Padding(0, 0, 0, 5),
 		};
 
 		// Center-align the content within the FlowLayoutPanel
@@ -454,29 +454,18 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 
 	private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)
 	{
-		TableLayoutPanel tpanelApplications = new TableLayoutPanel
-		{
-			ColumnCount = 3,
+		TableLayoutPanel tpanelApplications = new TableLayoutPanel {
+			ColumnCount = 2,
 			RowCount = 3,
 			Dock = DockStyle.Fill,
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Padding = new Padding(5),
-			Margin = new Padding(5),
+			Padding = new Padding(0),
+			Margin = new Padding(0),
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
 		};
 
-		// Define column styles
-		// tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70)); // List box
-		// tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // Buttons
-		// tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 10)); // Arrows
-
-		// Add label
-		tpanelApplications.Controls.Add(new Label {
-				Text = "Applications to run at startup",
-				AutoSize = true,
-				Anchor = AnchorStyles.Left,
-			}, 0, 0);
+		tpanelApplications.Controls.Add(new Label { Text = "Applications to run at startup", AutoSize = true }, 0, 0);
 		
 		tpanelApplications.SetColumnSpan(tpanelApplications.Controls[tpanelApplications.Controls.Count - 1], 3);
 
@@ -498,19 +487,35 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 		tpanelApplications.Controls.Add(buttonPanel, 1, 1);
 
 		// Add arrow buttons
-		FlowLayoutPanel arrowPanel = new FlowLayoutPanel {
-			FlowDirection = FlowDirection.TopDown,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-		};
-		
-		arrowPanel.Controls.Add(btnMoveUp);
-		arrowPanel.Controls.Add(btnMoveDown);
+        // Create arrow buttons panel. Flow Layout for easy HAlign. 
+        FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel {
+            FlowDirection = FlowDirection.LeftToRight,
+            Anchor = AnchorStyles.Right,
+            AutoSize = true,
+            Margin = new Padding(0),
+            Padding = new Padding(0)
+        };
 
-		tpanelApplications.Controls.Add(arrowPanel, 2, 1);
+        // Create the arrow buttons. 
+        btnMoveUp.Margin = new Padding(0, 0, 1, 0);
+        btnMoveDown.Margin = new Padding(1, 0, 0, 0);
+        fpanelApplicationArrows.Controls.Add(btnMoveUp);
+        fpanelApplicationArrows.Controls.Add(btnMoveDown);
 
-		// Add completed panel to main layout
-		mainLayoutPanel.Controls.Add(tpanelApplications);
+
+
+        // Add arrowButtonsPanel below the ListBox, centered
+        tpanelApplications.Controls.Add(fpanelApplicationArrows, 0, 2);
+
+        // Attach event handlers.   
+        lstApplications.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
+        btnAddApplication.Click += AddApplication_Click;
+        btnAddApplicationPath.Click += AddApplicationPath_Click;
+        btnRemoveApplication.Click += RemoveApplication_Click;
+        btnMoveUp.Click += btnApplicationsUp_Click;
+        btnMoveDown.Click += btnApplicationsDown_Click;
+
+        mainLayoutPanel.Controls.Add(tpanelApplications);
 	}
 
 	//Actions allowed list and controls.
@@ -524,6 +529,7 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 		EventHandler addButtonClick,
 		EventHandler removeButtonClick
 	)
+	
 	{
 		TableLayoutPanel actionsPanel = new TableLayoutPanel
 		{
@@ -1265,99 +1271,81 @@ public class ActionManagerForm : Form
 	}
 }
 
-public class ApplicationFileDetails
-{
+public class ApplicationFileDetails {
 	public string FileName { get; set; }
 	public string FullPath { get; set; }
 	public int Index { get; set; } // New property to store the index
 
-	public ApplicationFileDetails(string fullPath, int index)
-	{
+	public ApplicationFileDetails(string fullPath, int index) {
 		FullPath = fullPath;
 		FileName = Path.GetFileName(fullPath);
 		Index = index; // Initialize the index
 	}
 
-	public override string ToString()
-	{
+	public override string ToString() {
 		return FileName;
 	}
 }
 
-public class StartupManagerSettings
-{
+public class StartupManagerSettings {
 	public LoadOnStartupConfig LoadOnStartup { get; set; }
 	public List<ApplicationConfig> Applications { get; set; }
 	public ActionConfigs Actions { get; set; }
 	public UserSettingsConfig UserSettings { get; set; }
 }
 
-public class LoadOnStartupConfig
-{
+public class LoadOnStartupConfig {
 	public bool Enabled { get; set; }
 	public string Mode { get; set; } // Options: "Yes", "No", "Prompt"
 	public int DelayInSeconds { get; set; }
 }
 
-public class ApplicationConfig
-{
+public class ApplicationConfig {
 	public string Path { get; set; }
 	public bool IsEnabled { get; set; }
 	public int Order { get; set; }
 }
 
-public class ActionConfigs
-{
+public class ActionConfigs {
 	public List<ActionConfig> Permitted { get; set; }
 	public List<ActionConfig> Blocked { get; set; }
 }
 
-public class ActionConfig
-{
+public class ActionConfig {
 	public string Name { get; set; }
 	public bool IsEnabled { get; set; }
 	public int Order { get; set; }
 }
 
-public class UserSettingsConfig
-{
+public class UserSettingsConfig {
 	public bool ResetConfig { get; set; }
 	public ExportImportConfig ExportSettings { get; set; }
 	public ExportImportConfig ImportSettings { get; set; }
 	public DateTime LastSaveTime { get; set; }
 }
 
-public class ExportImportConfig
-{
+public class ExportImportConfig {
 	public string Path { get; set; }
 }
 
-public static class UserSettingsControl
-{
-	public static void SaveStartupManagerSettings(StartupManagerSettings settings, string filePath)
-	{
-		try
-		{
+public static class UserSettingsControl {
+	public static void SaveStartupManagerSettings(StartupManagerSettings settings, string filePath) {
+		try {
 			// Serialize the settings object to JSON format
-			string json = JsonSerializer.Serialize(
-				settings,
-				new JsonSerializerOptions { WriteIndented = true }
-			);
+			string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true } );
 
 			// Write the JSON to the specified file path
 			File.WriteAllText(filePath, json);
 
 			Console.WriteLine("Settings saved successfully.");
 		}
-		catch (Exception ex)
-		{
+		catch (Exception ex) {
 			Console.WriteLine($"An error occurred while saving settings: {ex.Message}");
 		}
 	}
 }
 
-public static class UIStyling
-{
+public static class UIStyling {
 	// Style for primary/main buttons
 	public static void StyleMainButton(Button button) {
 		button.Font = new Font("Microsoft Sans Serif", 8.5f);
@@ -1366,9 +1354,9 @@ public static class UIStyling
 		button.Margin = new Padding(0, 0, 0, 0);
 		button.Padding = new Padding(3, 3, 3, 3);
 		button.BackColor = Color.White; // Distinct button color
-    	button.ForeColor = SystemColors.ControlText; // Text color for contrast
-    	button.FlatAppearance.BorderSize = 1; // Add a subtle border
-    	button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
+		button.ForeColor = SystemColors.ControlText; // Text color for contrast
+		button.FlatAppearance.BorderSize = 1; // Add a subtle border
+		button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
 	}
 
 	// Style for secondary buttons (less prominent)

@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
 
-public class CPHInline
+public class CPHInline 
 {
 	// Importing user32.dll to use necessary methods
 	[DllImport("user32.dll")]
@@ -361,11 +361,11 @@ public class LoadStartupConfigForm : Form
 
 	private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 	{
-		// Size 55 for fixed.		
+		// Create the group box. 
 		GroupBox configurationGroupBox = new GroupBox();
 		UIStyling.StyleGroupBox(configurationGroupBox, "Manage your configuration");
 		
-		
+		// Create the table for the configuration buttons. 
 		TableLayoutPanel buttonTable = new TableLayoutPanel();
 		var numberOfCols = 5; 
 		
@@ -373,12 +373,8 @@ public class LoadStartupConfigForm : Form
 		var columnStyling = new List<ColumnStyle>();	
 		for (int i = 0; i < numberOfCols; i++) {
 			buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, (100 / numberOfCols)));
-		}
-				
+		}				
 		UIStyling.StyleTableLayoutPanel(buttonTable, columnCount: numberOfCols, rowCount: 1,  customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
-
-		// Set each column to take an equal percentage of the width
-		
 
 		// Add buttons to the TableLayoutPanel
 		buttonTable.Controls.Add(btnResetAllSettings, 0, 0);
@@ -441,32 +437,24 @@ public class LoadStartupConfigForm : Form
 
 	private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)
 	{
-		GroupBox applicationsToStartGroupBox = new GroupBox {
-			Text = "Applications to run on bot startup",
-			Font = new Font("Segoe UI", 10, FontStyle.Bold),
-			ForeColor = Color.DimGray,
-			BackColor = Color.WhiteSmoke,
-			Dock = DockStyle.Fill, 
-			Padding = new Padding(3, 3, 3, 0),
-			Margin = new Padding(3, 3, 3, 0),
-			AutoSize = true,
-		};
+		// Create the Applications group box. 
+		GroupBox applicationsToStartGroupBox = new GroupBox();
+		UIStyling.StyleGroupBox(applicationsToStartGroupBox, "Applications to run on bot startup");
 
-		TableLayoutPanel tpanelApplications = new TableLayoutPanel {
-			ColumnCount = 2,
-			RowCount = 2,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-			Padding = new Padding(0),
-			Margin = new Padding(0),
-			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-		};
-
-		tpanelApplications.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // First row gets all remaining space
-		tpanelApplications.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		// Create the application table. 
+		TableLayoutPanel tpanelApplications = new TableLayoutPanel();
 		
-		tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); // First column 70% width
-		tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Second column 30% width
+		var rowStyling = new List<RowStyle> {
+			new RowStyle(SizeType.Percent, 100),
+			new RowStyle(SizeType.AutoSize)    
+		};
+
+		var columnStyling = new List<ColumnStyle> {
+			new ColumnStyle(SizeType.Percent, 100),
+			new ColumnStyle(SizeType.AutoSize)     
+		};				
+				
+		UIStyling.StyleTableLayoutPanel(tpanelApplications, columnCount: 2, rowCount: 2,  customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
 
 		// Add list box
 		tpanelApplications.Controls.Add(lstApplications, 0, 0);
@@ -518,25 +506,23 @@ public class LoadStartupConfigForm : Form
 	}
 
 	//Actions allowed list and controls.
-	private void AddActionControls(
-		TableLayoutPanel mainLayoutPanel,
-		string title,
-		ListBox listBox,
-		Button addButton,
-		Button removeButton,
-		EventHandler ListBoxSelected,
-		EventHandler addButtonClick,
-		EventHandler removeButtonClick
-	)
-	{
-		TableLayoutPanel actionsPanel = new TableLayoutPanel
-		{
+	private void AddActionControls(TableLayoutPanel mainLayoutPanel,
+								   string title,
+								   ListBox listBox,
+								   Button addButton,
+								   Button removeButton,
+								   EventHandler ListBoxSelected,
+								   EventHandler addButtonClick,
+								   EventHandler removeButtonClick){		
+		
+		TableLayoutPanel actionsPanel = new TableLayoutPanel {
 			ColumnCount = 2,
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Padding = new Padding(5),
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
 		};
+
 
 		// Add label
 		actionsPanel.Controls.Add(new Label { Text = title, AutoSize = true }, 0, 0);
@@ -567,6 +553,7 @@ public class LoadStartupConfigForm : Form
 
 	private void AddSeparateActionGroups(TableLayoutPanel mainLayoutPanel)
 	{
+	
 		// Create a GroupBox for "Allowed Actions"
 		GroupBox allowedActionsGroupBox = CreateActionsGroupBox(
 			"Allowed Actions",
@@ -597,17 +584,8 @@ public class LoadStartupConfigForm : Form
 	private GroupBox CreateActionsGroupBox(string title, ListBox listBox, Button addButton, Button removeButton,
 											EventHandler listBoxSelected, EventHandler addButtonClick, EventHandler removeButtonClick)
 	{
-		// Create a GroupBox for the actions
-		GroupBox actionsGroupBox = new GroupBox {
-			Text = title,
-			Font = new Font("Segoe UI", 10, FontStyle.Bold),
-			ForeColor = Color.DimGray,
-			BackColor = Color.WhiteSmoke,
-			Dock = DockStyle.Fill,
-			Padding = new Padding(3,3,3,0),
-			Margin = new Padding(3,3,3,0),
-			AutoSize = true,
-		};
+		GroupBox actionsGroupBox = new GroupBox();
+		UIStyling.StyleGroupBox(actionsGroupBox, title);
 
 		// Create a layout for the GroupBox content
 		TableLayoutPanel actionsPanel = new TableLayoutPanel
@@ -1530,7 +1508,7 @@ public static class UIStyling
 		tableLayoutPanel.Dock = DockStyle.Fill;
 		tableLayoutPanel.Padding = new Padding(0);
 		tableLayoutPanel.Margin = new Padding(0);		
-		tableLayoutPanel.CellBorderStyle = cellBorderStyle;
+		tableLayoutPanel.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
 
 		// Allow the table to auto-resize if requested
 		tableLayoutPanel.AutoSize = autoSizeTable;

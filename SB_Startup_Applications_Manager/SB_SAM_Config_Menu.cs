@@ -265,10 +265,9 @@ public class LoadStartupConfigForm : Form
 		};
 
 		// Create a main layout panel for the "Startup" tab
-		var mainLayoutPanel = new TableLayoutPanel
-		{
+		var mainLayoutPanel = new TableLayoutPanel {
 			Dock = DockStyle.Fill, 
-			AutoSize = false,
+			AutoSize = true,
 			Padding = new Padding(3, 3, 3, 3),
 			Margin = new Padding(2, 2, 2, 2),			
 			ColumnCount = 1,
@@ -341,7 +340,7 @@ public class LoadStartupConfigForm : Form
 			Dock = DockStyle.Fill,
 			ColumnCount = 1,
 			Padding = new Padding(10),
-			AutoSize = true,
+			AutoSize = false,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
 		};
@@ -362,37 +361,24 @@ public class LoadStartupConfigForm : Form
 
 	private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 	{
-		// Create a GroupBox for configuration controls
-		GroupBox configurationGroupBox = new GroupBox
-		{
-			Text = "Manage your configuration",
-			Font = new Font("Segoe UI", 10, FontStyle.Bold),
-			ForeColor = Color.DimGray,
-			BackColor = Color.WhiteSmoke,
-			Dock = DockStyle.Fill,
-			Padding = new Padding(2,2,2,2),
-			Margin = new Padding(2,2,2,2),
-			Height = 55,
-		};
-
-		// Create a TableLayoutPanel for the buttons
-		TableLayoutPanel buttonTable = new TableLayoutPanel
-		{
-			Dock = DockStyle.Fill, // Stretch to fill the width of the group box
-			ColumnCount = 5, // Number of buttons
-			RowCount = 1,
-			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Padding = new Padding(0),
-			Margin = new Padding(0),
-			Height = 40,
-		};
+		// Size 55 for fixed.		
+		GroupBox configurationGroupBox = new GroupBox();
+		UIStyling.StyleGroupBox(configurationGroupBox, "Manage your configuration");
+		
+		
+		TableLayoutPanel buttonTable = new TableLayoutPanel();
+		var numberOfCols = 5; 
+		
+		var rowStyling = new List<RowStyle>{ new RowStyle(SizeType.AutoSize)};
+		var columnStyling = new List<ColumnStyle>();	
+		for (int i = 0; i < numberOfCols; i++) {
+			buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, (100 / numberOfCols)));
+		}
+				
+		UIStyling.StyleTableLayoutPanel(buttonTable, columnCount: numberOfCols, rowCount: 1,  customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
 
 		// Set each column to take an equal percentage of the width
-		for (int i = 0; i < buttonTable.ColumnCount; i++)
-		{
-			buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // 20% for each button
-		}
+		
 
 		// Add buttons to the TableLayoutPanel
 		buttonTable.Controls.Add(btnResetAllSettings, 0, 0);
@@ -413,6 +399,8 @@ public class LoadStartupConfigForm : Form
 
 		// Add the GroupBox to the main layout
 		mainLayoutPanel.Controls.Add(configurationGroupBox);
+		// Ensure the GroupBox row in the main layout has flexible height
+		mainLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 	}
 
 	// Flow control. Save and exit buttons.
@@ -426,7 +414,7 @@ public class LoadStartupConfigForm : Form
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Padding = new Padding(0),
-			Margin = new Padding(0, 0, 0, 5),
+			Margin = new Padding(0, 0, 0, 0),
 		};
 
 		// Center-align the content within the FlowLayoutPanel
@@ -627,7 +615,6 @@ public class LoadStartupConfigForm : Form
 			ColumnCount = 2,
 			Dock = DockStyle.Fill,
 			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Padding = new Padding(0),
 			Margin = new Padding(0),
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
@@ -645,7 +632,8 @@ public class LoadStartupConfigForm : Form
 			FlowDirection = FlowDirection.TopDown,
 			Dock = DockStyle.Fill,
 			AutoSize = true,
-			Margin = new Padding(5),
+			Margin = new Padding(0),
+			Padding = new Padding(0),
 		};
 
 		// Add buttons to the button panel
@@ -1525,6 +1513,67 @@ public static class UIStyling
 			button.BackColor = Color.White;
 		};
 	}
+	
+	
+	public static void StyleTableLayoutPanel(
+		TableLayoutPanel tableLayoutPanel,
+		int columnCount,
+		int rowCount,
+		TableLayoutPanelCellBorderStyle cellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+		List<RowStyle> customRowStyles = null,
+		List<ColumnStyle> customColumnStyles = null,
+		bool autoSizeTable = false)
+	{
+		// Set common properties
+		tableLayoutPanel.ColumnCount = columnCount;
+		tableLayoutPanel.RowCount = rowCount;
+		tableLayoutPanel.Dock = DockStyle.Fill;
+		tableLayoutPanel.Padding = new Padding(0);
+		tableLayoutPanel.Margin = new Padding(0);		
+		tableLayoutPanel.CellBorderStyle = cellBorderStyle;
+
+		// Allow the table to auto-resize if requested
+		tableLayoutPanel.AutoSize = autoSizeTable;
+
+		// Apply row styles
+		for (int i = 0; i < rowCount; i++)
+		{
+			tableLayoutPanel.RowStyles.Add(
+				i < customRowStyles?.Count 
+					? customRowStyles[i] 
+					: new RowStyle(SizeType.AutoSize));
+		}
+
+		// Apply column styles
+		for (int i = 0; i < columnCount; i++)
+		{
+			tableLayoutPanel.ColumnStyles.Add(
+				i < customColumnStyles?.Count 
+					? customColumnStyles[i] 
+					: new ColumnStyle(SizeType.Percent, 100f / columnCount));
+		}
+	}
+
+	
+	public static void StyleGroupBox(GroupBox groupBox, string text = null, int? height = null)
+	{
+		groupBox.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+		groupBox.ForeColor = Color.DimGray;
+		groupBox.BackColor = Color.WhiteSmoke;
+		groupBox.Dock = DockStyle.Fill;
+		groupBox.Padding = new Padding(2, 2, 2, 2);
+		groupBox.Margin = new Padding(2, 2, 2, 2);
+
+		// Adjust AutoSize based on height
+		groupBox.AutoSize = !height.HasValue;
+		if (height.HasValue) groupBox.Height = height.Value;
+
+		// Set text if provided
+		if (!string.IsNullOrEmpty(text))
+			groupBox.Text = text;
+	}
+
+
 	
 	public static void StyleTabControl(TabControl tabControl)
 	{

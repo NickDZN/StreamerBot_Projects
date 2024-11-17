@@ -23,12 +23,14 @@ public class CPHInline
 	[DllImport("user32.dll", SetLastError = true)]
 	private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
-	public bool Execute() {
+	public bool Execute()
+	{
 		// Attempt to get the handle of the currently active window
 		IntPtr activeWindowHandle = GetForegroundWindow();
 
 		// Check if the window was found
-		if (activeWindowHandle == IntPtr.Zero) {
+		if (activeWindowHandle == IntPtr.Zero)
+		{
 			MessageBox.Show("No active window found.");
 			return false;
 		}
@@ -38,23 +40,27 @@ public class CPHInline
 		GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
 		// Get the dimensions of the active window
-		if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect)) {
+		if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
+		{
 			MessageBox.Show("Failed to get window dimensions.");
 			return false;
 		}
 
 		// Start new thread for the form.
-		Thread staThread = new Thread(() => {
+		Thread staThread = new Thread(() =>
+		{
 			Application.EnableVisualStyles();
 
 			// Get the global action list
 			List<ActionData> actionList = CPH.GetActions();
 
-			if (mainFormInstance == null || mainFormInstance.IsDisposed) {
+			if (mainFormInstance == null || mainFormInstance.IsDisposed)
+			{
 				mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
 				Application.Run(mainFormInstance);
-			} 
-			else {
+			}
+			else
+			{
 				mainFormInstance.BringToFront();
 			}
 		});
@@ -65,39 +71,45 @@ public class CPHInline
 	}
 }
 
-public class LoadStartupConfigForm : Form {
+public class LoadStartupConfigForm : Form
+{
 	private List<ActionData> actionDataList;
 
 	//SB_SAM Startup Configuration Buttons.
-	private RadioButton radioStartupConfigYes = new RadioButton {
+	private RadioButton radioStartupConfigYes = new RadioButton
+	{
 		Text = "Yes",
 		AutoSize = true,
 		Dock = DockStyle.Fill,
 		TextAlign = ContentAlignment.MiddleLeft,
 	};
-	
-	private RadioButton radioStartupConfigNo = new RadioButton {
+
+	private RadioButton radioStartupConfigNo = new RadioButton
+	{
 		Text = "No",
 		AutoSize = true,
 		Dock = DockStyle.Fill,
 		TextAlign = ContentAlignment.MiddleLeft,
 	};
-	
-	private RadioButton radioStartupConfigPrompt = new RadioButton {
+
+	private RadioButton radioStartupConfigPrompt = new RadioButton
+	{
 		Text = "Prompt",
 		AutoSize = true,
 		Dock = DockStyle.Fill,
 		TextAlign = ContentAlignment.MiddleLeft,
 	};
-	
-	private Label lblStartupConfigDelay = new Label {
+
+	private Label lblStartupConfigDelay = new Label
+	{
 		Text = "Delay (In seconds)",
 		AutoSize = true,
 		Dock = DockStyle.Fill,
 		TextAlign = ContentAlignment.MiddleLeft,
 	};
-	
-	private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown {
+
+	private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown
+	{
 		Width = 40,
 		Minimum = 0,
 		Maximum = 30,
@@ -110,42 +122,41 @@ public class LoadStartupConfigForm : Form {
 
 	// Application Start-up IO's.
 	private ListBox lstApplications = new ListBox();
-	private Button btnAddApplication = new Button {Text = "Add Application"};
-	private Button btnAddApplicationPath = new Button {Text = "Add Path"};
-	private Button btnRemoveApplication = new Button {Text = "Remove Application", Enabled = false};
-	private Button btnMoveUp = new Button {Text = "▲"};
-	private Button btnMoveDown = new Button {Text = "▼"};
+	private Button btnAddApplication = new Button { Text = "Add Application" };
+	private Button btnAddApplicationPath = new Button { Text = "Add Path" };
+	private Button btnRemoveApplication = new Button { Text = "Remove Application", Enabled = false };
+	private Button btnMoveUp = new Button { Text = "▲" };
+	private Button btnMoveDown = new Button { Text = "▼" };
 
 	// Actions Startup Permitted IO's
 	private ListBox lstActionsPermitted = new ListBox();
-	private Button btnAddActionPermitted = new Button {Text = "Add Action"};
-	private Button btnRemoveActionPermitted = new Button {Text = "Remove Action", Enabled = false};
-	
+	private Button btnAddActionPermitted = new Button { Text = "Add Action" };
+	private Button btnRemoveActionPermitted = new Button { Text = "Remove Action", Enabled = false };
+
 	private ListBox lstActionsBlocked = new ListBox();
-	private Button btnAddActionBlocked = new Button {Text = "Add Action"};
-	private Button btnRemoveActionBlocked = new Button {Text = "Remove Action", Enabled = false};
+	private Button btnAddActionBlocked = new Button { Text = "Add Action" };
+	private Button btnRemoveActionBlocked = new Button { Text = "Remove Action", Enabled = false };
 
 	//User Settings Controls
-	private Button btnResetAllSettings = new Button {Text = "Remove All"};
-	private Button btnImportSettings = new Button {Text = "Import"};
-	private Button btnExportSettings = new Button {Text = "Export"};
+	private Button btnResetAllSettings = new Button { Text = "Remove All" };
+	private Button btnImportSettings = new Button { Text = "Import" };
+	private Button btnExportSettings = new Button { Text = "Export" };
 
 	// Main Form Controls.
-	private Button btnSaveForm = new Button {Text = "Save", Enabled = false};
-	private Button btnCloseForm = new Button {Text = "Close"};
-	private Button btnShowAbout = new Button {Text = "About"};
-	private Button btnTestConfig = new Button {Text = "Test"};
+	private Button btnSaveForm = new Button { Text = "Save", Enabled = false };
+	private Button btnCloseForm = new Button { Text = "Close" };
+	private Button btnShowAbout = new Button { Text = "About" };
+	private Button btnTestConfig = new Button { Text = "Test" };
 
 	// Tooltips.
 	private ToolTip toolTip = new ToolTip();
 
-	public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions) {
+	public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
+	{
 		// Locally store the list of actions
 		actionDataList = actions;
 
 		// Initialize standardized styles for controls
-		InitializeControls();
-
 		// Build the core form layout
 		var tabControl = BuildCoreForm(activeWindowRect);
 
@@ -164,42 +175,46 @@ public class LoadStartupConfigForm : Form {
 		tabControl.TabPages.Add(streamEndingTab);
 		tabControl.TabPages.Add(supportTab);
 
+		InitializeControls();
+
 		// Add TabControl to the form
 		this.Controls.Add(tabControl);
 	}
 
-	private void InitializeControls() {
-		// Apply styles to main control buttons. 
+	private void InitializeControls()
+	{
+		// Apply styles to main control buttons.
 		UIStyling.StyleMainButton(btnResetAllSettings);
 		UIStyling.StyleMainButton(btnImportSettings);
 		UIStyling.StyleMainButton(btnExportSettings);
 		UIStyling.StyleMainButton(btnShowAbout);
 		UIStyling.StyleMainButton(btnTestConfig);
-	
-		//Application Styling. 
+
+		//Application Styling.
 		UIStyling.StyleListBox(lstApplications);
 		UIStyling.StyleLongerButton(btnAddApplication);
 		UIStyling.StyleLongerButton(btnAddApplicationPath);
 		UIStyling.StyleLongerButton(btnRemoveApplication);
 		UIStyling.StyleArrowButton(btnMoveUp);
-		UIStyling.StyleArrowButton(btnMoveDown);		
-		
-		// Actions Permitted. 
+		UIStyling.StyleArrowButton(btnMoveDown);
+
+		// Actions Permitted.
 		UIStyling.StyleListBox(lstActionsPermitted);
 		UIStyling.StyleLongerButton(btnAddActionPermitted);
 		UIStyling.StyleLongerButton(btnRemoveActionPermitted);
-		
-		//Actions Blockes. 
+
+		//Actions Blockes.
 		UIStyling.StyleListBox(lstActionsBlocked);
 		UIStyling.StyleLongerButton(btnAddActionBlocked);
-		UIStyling.StyleLongerButton(btnRemoveActionBlocked);		
+		UIStyling.StyleLongerButton(btnRemoveActionBlocked);
 
-		// Form Save / Close. 
+		// Form Save / Close.
 		UIStyling.StyleMainButton(btnCloseForm);
 		UIStyling.StyleMainButton(btnSaveForm);
 	}
 
-	private TabControl BuildCoreForm(Rectangle activeWindowRect) {
+	private TabControl BuildCoreForm(Rectangle activeWindowRect)
+	{
 		// Configure the form properties
 		this.Text = "Startup Manager";
 		this.Width = 550;
@@ -215,85 +230,70 @@ public class LoadStartupConfigForm : Form {
 		this.TopMost = true;
 
 		// Create the TabControl with styled tabs
-		TabControl tabControl = new TabControl {
+		TabControl tabControl = new TabControl
+		{
 			Dock = DockStyle.Fill,
 			Font = new Font("Segoe UI", 10, FontStyle.Regular),
 			Padding = new Point(5, 5),
 		};
 
-		tabControl.Appearance = TabAppearance.FlatButtons;
-		tabControl.ItemSize = new Size(120, 20);
-		tabControl.DrawMode = TabDrawMode.OwnerDrawFixed;
-		tabControl.DrawItem += (s, e) => {
-			e.Graphics.FillRectangle(new SolidBrush(Color.WhiteSmoke), e.Bounds);
-			TextRenderer.DrawText(
-				e.Graphics,
-				tabControl.TabPages[e.Index].Text,
-				e.Font,
-				e.Bounds,
-				Color.Black
-			);
-		};
+		// Apply custom styling using the UIStyling helper
+		UIStyling.StyleTabControl(tabControl);
+		
 		return tabControl;
 	}
 
 	// Helper method to create a new tab page with common padding and layout
-	private TabPage CreateTabPage(string title) {
+	private TabPage CreateTabPage(string title)
+	{
 		return new TabPage(title) { Padding = new Padding(10) };
 	}
 
 	// Method to add controls for the "Startup" tab
-	private void AddStartupTabControls(TabPage startupTab) {
+	private void AddStartupTabControls(TabPage startupTab)
+	{
 		// Check if startupTab is not null to avoid null reference errors
 		if (startupTab == null)
 			throw new ArgumentNullException(nameof(startupTab));
 
-		// Create a main layout panel for the "Startup" tab
-		var mainLayoutPanel = new TableLayoutPanel {
+		// Create a Panel with AutoScroll enabled
+		Panel scrollablePanel = new Panel
+		{
 			Dock = DockStyle.Fill,
+			AutoScroll = true,
+			BackColor = Color.WhiteSmoke,
+		};
+
+		// Create a main layout panel for the "Startup" tab
+		var mainLayoutPanel = new TableLayoutPanel
+		{
+			Dock = DockStyle.Fill, 
+			AutoSize = false,
+			Padding = new Padding(3, 3, 3, 3),
+			Margin = new Padding(2, 2, 2, 2),			
 			ColumnCount = 1,
 			RowCount = 6,
-			Padding = new Padding(5,5,5,5),
-			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
 		};
+
 
 		// Add controls specific to "Startup" configuration
 		AddConfigurationControls(mainLayoutPanel);
 		AddApplicationControls(mainLayoutPanel);
-		AddActionControls(
-			mainLayoutPanel,
-			"Actions to run at startup",
-			lstActionsPermitted,
-			btnAddActionPermitted,
-			btnRemoveActionPermitted,
-			AddActionPermitted_SelIndhanged,
-			AddActionPermitted_Click,
-			RemoveActionPermitted_Click
-		);
-		AddActionControls(
-			mainLayoutPanel,
-			"Actions to block running at startup",
-			lstActionsBlocked,
-			btnAddActionBlocked,
-			btnRemoveActionBlocked,
-			AddActionBlocked_SelIndhanged,
-			AddActionBlocked_Click,
-			RemoveActionBlocked_Click
-		);
 
-		// Enable reordering for each ListBox
-		EnableListBoxOrdering(lstApplications);
-		EnableListBoxOrdering(lstActionsPermitted);
-		EnableListBoxOrdering(lstActionsBlocked);
+		// Add separate groups for allowed and blocked actions
+		AddSeparateActionGroups(mainLayoutPanel);
 
-		// Add additional controls for startup configuration
+		// Additional configuration and application controls
 		AddStartupConfigurationControls(mainLayoutPanel);
 		AddApplicationControlButtons(mainLayoutPanel);
 
-		// Add the configured layout to the "Startup" tab
-		startupTab.Controls.Add(mainLayoutPanel);
+		// Add the TableLayoutPanel to the scrollable Panel
+		scrollablePanel.Controls.Add(mainLayoutPanel);
+
+		// Add the scrollable Panel to the TabPage
+		startupTab.Controls.Add(scrollablePanel);
 	}
 
 	// Method to add controls for the "Stream Ending" tab
@@ -360,68 +360,67 @@ public class LoadStartupConfigForm : Form {
 		supportTab.Controls.Add(supportLayoutPanel);
 	}
 
-private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
-{
-	// Create a GroupBox for configuration controls
-	GroupBox configurationGroupBox = new GroupBox
+	private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 	{
-		Text = "Manage your configuration",
-		Font = new Font("Segoe UI", 10, FontStyle.Bold),
-		ForeColor = Color.DimGray,
-		BackColor = Color.WhiteSmoke,
-		Dock = DockStyle.Fill, // Ensure it spans the available width
-		Padding = new Padding(5),
-		Margin = new Padding(5),
-		Height = 55
-		
-	};
+		// Create a GroupBox for configuration controls
+		GroupBox configurationGroupBox = new GroupBox
+		{
+			Text = "Manage your configuration",
+			Font = new Font("Segoe UI", 10, FontStyle.Bold),
+			ForeColor = Color.DimGray,
+			BackColor = Color.WhiteSmoke,
+			Dock = DockStyle.Fill,
+			Padding = new Padding(2,2,2,2),
+			Margin = new Padding(2,2,2,2),
+			Height = 55,
+		};
 
-	// Create a TableLayoutPanel for the buttons
-	TableLayoutPanel buttonTable = new TableLayoutPanel
-	{
-		Dock = DockStyle.Fill, // Stretch to fill the width of the group box
-		ColumnCount = 5, // Number of buttons
-		RowCount = 1,
-		AutoSize = true,
-		AutoSizeMode = AutoSizeMode.GrowAndShrink,
-		Padding = new Padding(0),
-		Margin = new Padding(0),
-		Height = 40
-	};
+		// Create a TableLayoutPanel for the buttons
+		TableLayoutPanel buttonTable = new TableLayoutPanel
+		{
+			Dock = DockStyle.Fill, // Stretch to fill the width of the group box
+			ColumnCount = 5, // Number of buttons
+			RowCount = 1,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Padding = new Padding(0),
+			Margin = new Padding(0),
+			Height = 40,
+		};
 
-	// Set each column to take an equal percentage of the width
-	for (int i = 0; i < buttonTable.ColumnCount; i++)
-	{
-		buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // 20% for each button
+		// Set each column to take an equal percentage of the width
+		for (int i = 0; i < buttonTable.ColumnCount; i++)
+		{
+			buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // 20% for each button
+		}
+
+		// Add buttons to the TableLayoutPanel
+		buttonTable.Controls.Add(btnResetAllSettings, 0, 0);
+		buttonTable.Controls.Add(btnImportSettings, 1, 0);
+		buttonTable.Controls.Add(btnExportSettings, 2, 0);
+		buttonTable.Controls.Add(btnShowAbout, 3, 0);
+		buttonTable.Controls.Add(btnTestConfig, 4, 0);
+
+		// Add click event handlers for the buttons
+		btnResetAllSettings.Click += MainCanvasCloseButton_Click;
+		btnImportSettings.Click += MainCanvasCloseButton_Click;
+		btnExportSettings.Click += MainCanvasCloseButton_Click;
+		btnShowAbout.Click += MainCanvasCloseButton_Click;
+		btnTestConfig.Click += MainCanvasCloseButton_Click;
+
+		// Add the TableLayoutPanel to the GroupBox
+		configurationGroupBox.Controls.Add(buttonTable);
+
+		// Add the GroupBox to the main layout
+		mainLayoutPanel.Controls.Add(configurationGroupBox);
 	}
-
-	// Add buttons to the TableLayoutPanel
-	buttonTable.Controls.Add(btnResetAllSettings, 0, 0);
-	buttonTable.Controls.Add(btnImportSettings, 1, 0);
-	buttonTable.Controls.Add(btnExportSettings, 2, 0);
-	buttonTable.Controls.Add(btnShowAbout, 3, 0);
-	buttonTable.Controls.Add(btnTestConfig, 4, 0);
-
-	// Add click event handlers for the buttons
-	btnResetAllSettings.Click += MainCanvasCloseButton_Click;
-	btnImportSettings.Click += MainCanvasCloseButton_Click;
-	btnExportSettings.Click += MainCanvasCloseButton_Click;
-	btnShowAbout.Click += MainCanvasCloseButton_Click;
-	btnTestConfig.Click += MainCanvasCloseButton_Click;
-
-	// Add the TableLayoutPanel to the GroupBox
-	configurationGroupBox.Controls.Add(buttonTable);
-
-	// Add the GroupBox to the main layout
-	mainLayoutPanel.Controls.Add(configurationGroupBox);
-}
-
 
 	// Flow control. Save and exit buttons.
 	//ToDo: Centralise buttons to the bottom.
 	private void AddApplicationControlButtons(TableLayoutPanel mainLayoutPanel)
 	{
-		FlowLayoutPanel buttonPanel = new FlowLayoutPanel {
+		FlowLayoutPanel buttonPanel = new FlowLayoutPanel
+		{
 			FlowDirection = FlowDirection.LeftToRight,
 			Dock = DockStyle.Fill,
 			AutoSize = true,
@@ -432,7 +431,7 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 
 		// Center-align the content within the FlowLayoutPanel
 		buttonPanel.Anchor = AnchorStyles.None;
-		buttonPanel.WrapContents = false; 
+		buttonPanel.WrapContents = false;
 		//buttonPanel.HorizontalAlign = ContentAlignment.MiddleCenter;
 
 		// Add the "Save" and "Cancel" buttons to the FlowLayoutPanel with padding for spacing
@@ -454,23 +453,35 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 
 	private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)
 	{
+		GroupBox applicationsToStartGroupBox = new GroupBox {
+			Text = "Applications to run on bot startup",
+			Font = new Font("Segoe UI", 10, FontStyle.Bold),
+			ForeColor = Color.DimGray,
+			BackColor = Color.WhiteSmoke,
+			Dock = DockStyle.Fill, 
+			Padding = new Padding(3, 3, 3, 0),
+			Margin = new Padding(3, 3, 3, 0),
+			AutoSize = true,
+		};
+
 		TableLayoutPanel tpanelApplications = new TableLayoutPanel {
 			ColumnCount = 2,
-			RowCount = 3,
+			RowCount = 2,
 			Dock = DockStyle.Fill,
 			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Padding = new Padding(0),
 			Margin = new Padding(0),
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
 		};
 
-		tpanelApplications.Controls.Add(new Label { Text = "Applications to run at startup", AutoSize = true }, 0, 0);
+		tpanelApplications.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // First row gets all remaining space
+		tpanelApplications.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 		
-		tpanelApplications.SetColumnSpan(tpanelApplications.Controls[tpanelApplications.Controls.Count - 1], 3);
+		tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); // First column 70% width
+		tpanelApplications.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Second column 30% width
 
 		// Add list box
-		tpanelApplications.Controls.Add(lstApplications, 0, 1);
+		tpanelApplications.Controls.Add(lstApplications, 0, 0);
 
 		// Create panel for Add/Remove buttons
 		FlowLayoutPanel buttonPanel = new FlowLayoutPanel {
@@ -478,44 +489,44 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 			Dock = DockStyle.Fill,
 			AutoSize = true,
 		};
-		
+
 		buttonPanel.Controls.Add(btnAddApplication);
 		buttonPanel.Controls.Add(btnRemoveApplication);
 		buttonPanel.Controls.Add(btnAddApplicationPath);
 
 		// Add button panel
-		tpanelApplications.Controls.Add(buttonPanel, 1, 1);
+		tpanelApplications.Controls.Add(buttonPanel, 1, 0);
 
 		// Add arrow buttons
-        // Create arrow buttons panel. Flow Layout for easy HAlign. 
-        FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel {
-            FlowDirection = FlowDirection.LeftToRight,
-            Anchor = AnchorStyles.Right,
-            AutoSize = true,
-            Margin = new Padding(0),
-            Padding = new Padding(0)
-        };
+		// Create arrow buttons panel. Flow Layout for easy HAlign.
+		FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel {
+			FlowDirection = FlowDirection.LeftToRight,
+			Anchor = AnchorStyles.Right,
+			AutoSize = true,
+			Margin = new Padding(0),
+			Padding = new Padding(0),
+		};
 
-        // Create the arrow buttons. 
-        btnMoveUp.Margin = new Padding(0, 0, 1, 0);
-        btnMoveDown.Margin = new Padding(1, 0, 0, 0);
-        fpanelApplicationArrows.Controls.Add(btnMoveUp);
-        fpanelApplicationArrows.Controls.Add(btnMoveDown);
+		// Create the arrow buttons.
+		btnMoveUp.Margin = new Padding(0, 0, 1, 0);
+		btnMoveDown.Margin = new Padding(1, 0, 0, 0);
+		fpanelApplicationArrows.Controls.Add(btnMoveUp);
+		fpanelApplicationArrows.Controls.Add(btnMoveDown);
 
+		// Add arrowButtonsPanel below the ListBox, centered
+		tpanelApplications.Controls.Add(fpanelApplicationArrows, 0, 1);
 
+		// Attach event handlers.
+		lstApplications.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged;
+		btnAddApplication.Click += AddApplication_Click;
+		btnAddApplicationPath.Click += AddApplicationPath_Click;
+		btnRemoveApplication.Click += RemoveApplication_Click;
+		btnMoveUp.Click += btnApplicationsUp_Click;
+		btnMoveDown.Click += btnApplicationsDown_Click;
 
-        // Add arrowButtonsPanel below the ListBox, centered
-        tpanelApplications.Controls.Add(fpanelApplicationArrows, 0, 2);
+		applicationsToStartGroupBox.Controls.Add(tpanelApplications);
 
-        // Attach event handlers.   
-        lstApplications.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged; 
-        btnAddApplication.Click += AddApplication_Click;
-        btnAddApplicationPath.Click += AddApplicationPath_Click;
-        btnRemoveApplication.Click += RemoveApplication_Click;
-        btnMoveUp.Click += btnApplicationsUp_Click;
-        btnMoveDown.Click += btnApplicationsDown_Click;
-
-        mainLayoutPanel.Controls.Add(tpanelApplications);
+		mainLayoutPanel.Controls.Add(applicationsToStartGroupBox);
 	}
 
 	//Actions allowed list and controls.
@@ -529,7 +540,6 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 		EventHandler addButtonClick,
 		EventHandler removeButtonClick
 	)
-	
 	{
 		TableLayoutPanel actionsPanel = new TableLayoutPanel
 		{
@@ -554,9 +564,9 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 			Dock = DockStyle.Fill,
 			AutoSize = true,
 		};
+
 		buttonPanel.Controls.Add(addButton);
 		buttonPanel.Controls.Add(removeButton);
-
 		actionsPanel.Controls.Add(buttonPanel, 1, 1);
 
 		// Add events
@@ -567,11 +577,102 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 		mainLayoutPanel.Controls.Add(actionsPanel);
 	}
 
+	private void AddSeparateActionGroups(TableLayoutPanel mainLayoutPanel)
+	{
+		// Create a GroupBox for "Allowed Actions"
+		GroupBox allowedActionsGroupBox = CreateActionsGroupBox(
+			"Allowed Actions",
+			lstActionsPermitted,
+			btnAddActionPermitted,
+			btnRemoveActionPermitted,
+			AddActionPermitted_SelIndhanged,
+			AddActionPermitted_Click,
+			RemoveActionPermitted_Click
+		);
+
+		// Create a GroupBox for "Blocked Actions"
+		GroupBox blockedActionsGroupBox = CreateActionsGroupBox(
+			"Blocked Actions",
+			lstActionsBlocked,
+			btnAddActionBlocked,
+			btnRemoveActionBlocked,
+			AddActionBlocked_SelIndhanged,
+			AddActionBlocked_Click,
+			RemoveActionBlocked_Click
+		);
+
+		// Add both GroupBoxes to the main layout
+		mainLayoutPanel.Controls.Add(allowedActionsGroupBox);
+		mainLayoutPanel.Controls.Add(blockedActionsGroupBox);
+	}
+
+	private GroupBox CreateActionsGroupBox(string title, ListBox listBox, Button addButton, Button removeButton,
+											EventHandler listBoxSelected, EventHandler addButtonClick, EventHandler removeButtonClick)
+	{
+		// Create a GroupBox for the actions
+		GroupBox actionsGroupBox = new GroupBox {
+			Text = title,
+			Font = new Font("Segoe UI", 10, FontStyle.Bold),
+			ForeColor = Color.DimGray,
+			BackColor = Color.WhiteSmoke,
+			Dock = DockStyle.Fill,
+			Padding = new Padding(3,3,3,0),
+			Margin = new Padding(3,3,3,0),
+			AutoSize = true,
+		};
+
+		// Create a layout for the GroupBox content
+		TableLayoutPanel actionsPanel = new TableLayoutPanel
+		{
+			ColumnCount = 2,
+			Dock = DockStyle.Fill,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Padding = new Padding(0),
+			Margin = new Padding(0),
+			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
+		};
+
+		actionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); // First column 70% width
+		actionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Second column 30% width
+
+		// Add ListBox to the panel
+		actionsPanel.Controls.Add(listBox, 0, 0);
+
+		// Create a FlowLayoutPanel for the buttons
+		FlowLayoutPanel buttonPanel = new FlowLayoutPanel
+		{
+			FlowDirection = FlowDirection.TopDown,
+			Dock = DockStyle.Fill,
+			AutoSize = true,
+			Margin = new Padding(5),
+		};
+
+		// Add buttons to the button panel
+		buttonPanel.Controls.Add(addButton);
+		buttonPanel.Controls.Add(removeButton);
+
+		// Add button panel to the layout
+		actionsPanel.Controls.Add(buttonPanel, 1, 0);
+
+		// Attach event handlers
+		listBox.SelectedIndexChanged += listBoxSelected;
+		addButton.Click += addButtonClick;
+		removeButton.Click += removeButtonClick;
+
+		// Add the layout to the GroupBox
+		actionsGroupBox.Controls.Add(actionsPanel);
+
+		return actionsGroupBox;
+	}
+
 	protected override void OnLoad(EventArgs e)
 	{
 		base.OnLoad(e);
 
-		// Calculate the total required height of the form
+		// Calculate The
+
+		// total required height of the form
 		int requiredHeight = this
 			.Controls.OfType<Control>()
 			.Sum(control => control.PreferredSize.Height + control.Margin.Vertical);
@@ -586,7 +687,8 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 	private void AddStartupConfigurationControls(TableLayoutPanel mainLayoutPanel)
 	{
 		// Styled GroupBox for startup options
-		GroupBox startupOptionsGroup = new GroupBox {
+		GroupBox startupOptionsGroup = new GroupBox
+		{
 			Text = "Load Applications on Startup",
 			Font = new Font("Segoe UI", 10, FontStyle.Bold),
 			ForeColor = Color.DimGray,
@@ -595,7 +697,8 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 			Height = 60,
 		};
 
-		TableLayoutPanel startupOptionsPanel = new TableLayoutPanel {
+		TableLayoutPanel startupOptionsPanel = new TableLayoutPanel
+		{
 			ColumnCount = 6,
 			RowCount = 1,
 			Dock = DockStyle.Fill,
@@ -612,7 +715,7 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 		// Styled delay controls
 		lblStartupConfigDelay.ForeColor = Color.DimGray;
 		numupdwnStartupConfigDelay.BackColor = Color.White;
-		
+
 		// Define column styles
 		startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 55)); // Column 1: Fixed width
 		startupOptionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 55)); // Column 2: Fixed width
@@ -669,9 +772,7 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 								}
 								else
 								{
-									MessageBox.Show(
-										"This application file has already been added."
-									);
+									MessageBox.Show("This application file has already been added.");
 								}
 							})
 						);
@@ -924,10 +1025,7 @@ private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 		);
 
 		// Move the dragged item to the drop position if it's valid and different
-		if (
-			indexOfItemUnderMouseToDrop != ListBox.NoMatches
-			&& indexOfItemUnderMouseToDrop != indexOfListItem
-		)
+		if (indexOfItemUnderMouseToDrop != ListBox.NoMatches && indexOfItemUnderMouseToDrop != indexOfListItem)
 		{
 			object draggedItem = listBox.Items[indexOfListItem];
 			listBox.Items.RemoveAt(indexOfListItem);
@@ -1229,10 +1327,7 @@ public class ActionManagerForm : Form
 		if (lstAMFListView.SelectedItems.Count > 0)
 		{
 			// Retrieve the names of all selected actions
-			SelectedActions = lstAMFListView
-				.SelectedItems.Cast<ListViewItem>()
-				.Select(item => item.Text)
-				.ToList();
+			SelectedActions = lstAMFListView.SelectedItems.Cast<ListViewItem>().Select(item => item.Text).ToList();
 
 			// Close the form and set DialogResult to OK
 			DialogResult = DialogResult.OK;
@@ -1271,83 +1366,99 @@ public class ActionManagerForm : Form
 	}
 }
 
-public class ApplicationFileDetails {
+public class ApplicationFileDetails
+{
 	public string FileName { get; set; }
 	public string FullPath { get; set; }
 	public int Index { get; set; } // New property to store the index
 
-	public ApplicationFileDetails(string fullPath, int index) {
+	public ApplicationFileDetails(string fullPath, int index)
+	{
 		FullPath = fullPath;
 		FileName = Path.GetFileName(fullPath);
 		Index = index; // Initialize the index
 	}
 
-	public override string ToString() {
+	public override string ToString()
+	{
 		return FileName;
 	}
 }
 
-public class StartupManagerSettings {
+public class StartupManagerSettings
+{
 	public LoadOnStartupConfig LoadOnStartup { get; set; }
 	public List<ApplicationConfig> Applications { get; set; }
 	public ActionConfigs Actions { get; set; }
 	public UserSettingsConfig UserSettings { get; set; }
 }
 
-public class LoadOnStartupConfig {
+public class LoadOnStartupConfig
+{
 	public bool Enabled { get; set; }
 	public string Mode { get; set; } // Options: "Yes", "No", "Prompt"
 	public int DelayInSeconds { get; set; }
 }
 
-public class ApplicationConfig {
+public class ApplicationConfig
+{
 	public string Path { get; set; }
 	public bool IsEnabled { get; set; }
 	public int Order { get; set; }
 }
 
-public class ActionConfigs {
+public class ActionConfigs
+{
 	public List<ActionConfig> Permitted { get; set; }
 	public List<ActionConfig> Blocked { get; set; }
 }
 
-public class ActionConfig {
+public class ActionConfig
+{
 	public string Name { get; set; }
 	public bool IsEnabled { get; set; }
 	public int Order { get; set; }
 }
 
-public class UserSettingsConfig {
+public class UserSettingsConfig
+{
 	public bool ResetConfig { get; set; }
 	public ExportImportConfig ExportSettings { get; set; }
 	public ExportImportConfig ImportSettings { get; set; }
 	public DateTime LastSaveTime { get; set; }
 }
 
-public class ExportImportConfig {
+public class ExportImportConfig
+{
 	public string Path { get; set; }
 }
 
-public static class UserSettingsControl {
-	public static void SaveStartupManagerSettings(StartupManagerSettings settings, string filePath) {
-		try {
+public static class UserSettingsControl
+{
+	public static void SaveStartupManagerSettings(StartupManagerSettings settings, string filePath)
+	{
+		try
+		{
 			// Serialize the settings object to JSON format
-			string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true } );
+			string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
 
 			// Write the JSON to the specified file path
 			File.WriteAllText(filePath, json);
 
 			Console.WriteLine("Settings saved successfully.");
 		}
-		catch (Exception ex) {
+		catch (Exception ex)
+		{
 			Console.WriteLine($"An error occurred while saving settings: {ex.Message}");
 		}
 	}
 }
 
-public static class UIStyling {
+public static class UIStyling
+{
 	// Style for primary/main buttons
-	public static void StyleMainButton(Button button) {
+	public static void StyleMainButton(Button button)
+	{
 		button.Font = new Font("Microsoft Sans Serif", 8.5f);
 		button.Width = 90;
 		button.Height = 24;
@@ -1357,18 +1468,29 @@ public static class UIStyling {
 		button.ForeColor = SystemColors.ControlText; // Text color for contrast
 		button.FlatAppearance.BorderSize = 1; // Add a subtle border
 		button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
+		
+		AttachHoverEffects(button);
 	}
 
 	// Style for secondary buttons (less prominent)
-	public static void StyleLongerButton(Button button) {
+	public static void StyleLongerButton(Button button)
+	{
+		button.Font = new Font("Microsoft Sans Serif", 8.5f);
 		button.Width = 120;
 		button.Height = 24;
-		button.Margin = new Padding(0, 0, 0, 0);
-		button.Padding = new Padding(3, 3, 3, 3);
+		button.Margin = new Padding(1, 1, 1, 1);
+		button.Padding = new Padding(2, 2, 2, 2);
+		button.BackColor = Color.White; // Distinct button color
+		button.ForeColor = SystemColors.ControlText; // Text color for contrast
+		button.FlatAppearance.BorderSize = 1; // Add a subtle border
+		button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
+		
+		AttachHoverEffects(button);
 	}
 
 	// Style for arrow buttons (up/down buttons)
-	public static void StyleArrowButton(Button button) {
+	public static void StyleArrowButton(Button button)
+	{
 		button.Width = 20;
 		button.Height = 20;
 		button.Margin = new Padding(0, 0, 0, 0);
@@ -1376,7 +1498,8 @@ public static class UIStyling {
 	}
 
 	// Style for list boxes
-	public static void StyleListBox(ListBox listBox) {
+	public static void StyleListBox(ListBox listBox)
+	{
 		listBox.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 		listBox.BackColor = Color.White;
 		listBox.ForeColor = Color.Black;
@@ -1384,6 +1507,45 @@ public static class UIStyling {
 		listBox.Dock = DockStyle.Fill;
 		listBox.Height = 120;
 		listBox.Width = 300;
-		listBox.Margin = new Padding(5);
+		listBox.Padding = new Padding(5, 5, 5, 0);
+		listBox.Margin = new Padding(5, 5, 5, 0);
 	}
+	
+	private static void AttachHoverEffects(Button button)
+	{
+		// Change to light blue on hover
+		button.MouseEnter += (sender, e) =>
+		{
+			button.BackColor = ColorTranslator.FromHtml("#D6EBFF"); // Light blue hover color
+		};
+
+		// Revert to original color on leave
+		button.MouseLeave += (sender, e) =>
+		{
+			button.BackColor = Color.White;
+		};
+	}
+	
+	public static void StyleTabControl(TabControl tabControl)
+	{
+		tabControl.Appearance = TabAppearance.FlatButtons; // Set tabs to flat style
+		tabControl.ItemSize = new Size(120, 20); // Custom size for each tab
+		tabControl.DrawMode = TabDrawMode.OwnerDrawFixed; // Enable custom drawing
+		tabControl.DrawItem += (s, e) => // Define custom drawing behavior
+		{
+			// Fill tab background with custom color
+			e.Graphics.FillRectangle(new SolidBrush(Color.WhiteSmoke), e.Bounds);
+			
+			// Draw the tab text with custom color
+			TextRenderer.DrawText(
+				e.Graphics,
+				tabControl.TabPages[e.Index].Text,
+				e.Font,
+				e.Bounds,
+				Color.Black
+			);
+		};
+	}
+	
+	
 }

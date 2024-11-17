@@ -312,9 +312,7 @@ public class StartupConfigForm : Form
                                 }
                                 else
                                 {
-                                    MessageBox.Show(
-                                        "This application file has already been added."
-                                    );
+                                    MessageBox.Show("This application file has already been added.");
                                 }
                             })
                         );
@@ -581,7 +579,7 @@ public class ActionManagerForm : Form
         actionDataList = actionData;
 
         addActionToListButton.Click += AddActionToListButton_Click;
-        cancelAddButton.Click += CancelButton_Click; 
+        cancelAddButton.Click += CancelButton_Click;
         LoadActions();
     }
 
@@ -612,16 +610,19 @@ public class ActionManagerForm : Form
         }
         else
         {
-            MessageBox.Show("Please select an action to add.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(
+                "Please select an action to add.",
+                "Selection Required",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
         }
-
     }
 
     private void CancelButton_Click(object sender, EventArgs e)
     {
-       Close();
+        Close();
     }
-
 
     private void EnableAction(string actionName)
     {

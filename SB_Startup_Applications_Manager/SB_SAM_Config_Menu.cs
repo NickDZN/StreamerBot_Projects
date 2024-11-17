@@ -505,52 +505,6 @@ public class LoadStartupConfigForm : Form
 		mainLayoutPanel.Controls.Add(applicationsToStartGroupBox);
 	}
 
-	//Actions allowed list and controls.
-	private void AddActionControls(TableLayoutPanel mainLayoutPanel,
-								   string title,
-								   ListBox listBox,
-								   Button addButton,
-								   Button removeButton,
-								   EventHandler ListBoxSelected,
-								   EventHandler addButtonClick,
-								   EventHandler removeButtonClick){		
-		
-		TableLayoutPanel actionsPanel = new TableLayoutPanel {
-			ColumnCount = 2,
-			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Padding = new Padding(5),
-			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-		};
-
-
-		// Add label
-		actionsPanel.Controls.Add(new Label { Text = title, AutoSize = true }, 0, 0);
-		actionsPanel.SetColumnSpan(actionsPanel.Controls[actionsPanel.Controls.Count - 1], 2);
-
-		// Add list box
-		actionsPanel.Controls.Add(listBox, 0, 1);
-
-		// Add buttons
-		FlowLayoutPanel buttonPanel = new FlowLayoutPanel
-		{
-			FlowDirection = FlowDirection.TopDown,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-		};
-
-		buttonPanel.Controls.Add(addButton);
-		buttonPanel.Controls.Add(removeButton);
-		actionsPanel.Controls.Add(buttonPanel, 1, 1);
-
-		// Add events
-		addButton.Click += addButtonClick;
-		removeButton.Click += removeButtonClick;
-
-		// Add actions panel to main layout
-		mainLayoutPanel.Controls.Add(actionsPanel);
-	}
-
 	private void AddSeparateActionGroups(TableLayoutPanel mainLayoutPanel)
 	{
 	
@@ -586,21 +540,18 @@ public class LoadStartupConfigForm : Form
 	{
 		GroupBox actionsGroupBox = new GroupBox();
 		UIStyling.StyleGroupBox(actionsGroupBox, title);
+	
+		TableLayoutPanel actionsPanel = new TableLayoutPanel();	
+	
+		var rowStyling = new List<RowStyle> {new RowStyle(SizeType.AutoSize)};
 
-		// Create a layout for the GroupBox content
-		TableLayoutPanel actionsPanel = new TableLayoutPanel
-		{
-			ColumnCount = 2,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-			Padding = new Padding(0),
-			Margin = new Padding(0),
-			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-		};
-
-		actionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); // First column 70% width
-		actionsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Second column 30% width
-
+		var columnStyling = new List<ColumnStyle> {
+			new ColumnStyle(SizeType.Percent, 100),
+			new ColumnStyle(SizeType.AutoSize)     
+		};	
+				
+		UIStyling.StyleTableLayoutPanel(actionsPanel, columnCount: 2, rowCount: 1, customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);		
+	
 		// Add ListBox to the panel
 		actionsPanel.Controls.Add(listBox, 0, 0);
 
@@ -700,6 +651,11 @@ public class LoadStartupConfigForm : Form
 		startupOptionsGroup.Controls.Add(startupOptionsPanel);
 		mainLayoutPanel.Controls.Add(startupOptionsGroup);
 	}
+
+
+
+
+
 
 	private void AddApplication_Click(object sender, EventArgs e)
 	{

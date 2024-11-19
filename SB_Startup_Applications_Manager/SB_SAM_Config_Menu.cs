@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
 
-public class CPHInline 
+public class CPHInline
 {
 	// Importing user32.dll to use necessary methods
 	[DllImport("user32.dll")]
@@ -217,7 +217,7 @@ public class LoadStartupConfigForm : Form
 	{
 		// Configure the form properties
 		this.Text = "Startup Manager";
-		this.Width = 550;
+		this.Width = 600;
 		this.Height = 800;
 		this.BackColor = Color.WhiteSmoke;
 		this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -239,7 +239,7 @@ public class LoadStartupConfigForm : Form
 
 		// Apply custom styling using the UIStyling helper
 		UIStyling.StyleTabControl(tabControl);
-		
+
 		return tabControl;
 	}
 
@@ -265,14 +265,15 @@ public class LoadStartupConfigForm : Form
 		};
 
 		// Create a main layout panel for the "Startup" tab
-		var mainLayoutPanel = new TableLayoutPanel {
-			Dock = DockStyle.Fill, 
+		var mainLayoutPanel = new TableLayoutPanel
+		{
+			Dock = DockStyle.Fill,
 			AutoSize = true,
 			Padding = new Padding(3, 3, 3, 3),
-			Margin = new Padding(2, 2, 2, 2),			
+			Margin = new Padding(2, 2, 2, 2),
 			ColumnCount = 1,
 			RowCount = 6,
-			
+
 			CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
 		};
 
@@ -359,29 +360,52 @@ public class LoadStartupConfigForm : Form
 		supportTab.Controls.Add(supportLayoutPanel);
 	}
 
+
+	/* STARTUP TAB
+	**
+	**
+	**
+	**
+	*/
 	private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
 	{
 		// Create the group box. 
 		GroupBox configurationGroupBox = new GroupBox();
 		UIStyling.StyleGroupBox(configurationGroupBox, "Manage your configuration");
-		
+
 		// Create the table for the configuration buttons. 
 		TableLayoutPanel buttonTable = new TableLayoutPanel();
-		var numberOfCols = 5; 
-		
-		var rowStyling = new List<RowStyle>{ new RowStyle(SizeType.AutoSize)};
-		var columnStyling = new List<ColumnStyle>();	
-		for (int i = 0; i < numberOfCols; i++) {
+		var numberOfCols = 5;
+
+		var rowStyling = new List<RowStyle> { new RowStyle(SizeType.AutoSize) };
+		var columnStyling = new List<ColumnStyle>();
+		for (int i = 0; i < numberOfCols; i++)
+		{
 			buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, (100 / numberOfCols)));
-		}				
-		UIStyling.StyleTableLayoutPanel(buttonTable, columnCount: numberOfCols, rowCount: 1,  customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
+		}
+		
+		UIStyling.StyleTableLayoutPanel(buttonTable, columnCount: numberOfCols, rowCount: 1, customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
 
 		// Add buttons to the TableLayoutPanel
 		buttonTable.Controls.Add(btnResetAllSettings, 0, 0);
+		btnResetAllSettings.Anchor = AnchorStyles.None;
+		btnResetAllSettings.Dock = DockStyle.None;
+
 		buttonTable.Controls.Add(btnImportSettings, 1, 0);
+		btnImportSettings.Anchor = AnchorStyles.None;
+		btnImportSettings.Dock = DockStyle.None;		
+		
 		buttonTable.Controls.Add(btnExportSettings, 2, 0);
+		btnExportSettings.Anchor = AnchorStyles.None;
+		btnExportSettings.Dock = DockStyle.None;		
+		
 		buttonTable.Controls.Add(btnShowAbout, 3, 0);
+		btnShowAbout.Anchor = AnchorStyles.None;
+		btnShowAbout.Dock = DockStyle.None;		
+		
 		buttonTable.Controls.Add(btnTestConfig, 4, 0);
+		btnTestConfig.Anchor = AnchorStyles.None;
+		btnTestConfig.Dock = DockStyle.None;		
 
 		// Add click event handlers for the buttons
 		btnResetAllSettings.Click += MainCanvasCloseButton_Click;
@@ -395,23 +419,14 @@ public class LoadStartupConfigForm : Form
 
 		// Add the GroupBox to the main layout
 		mainLayoutPanel.Controls.Add(configurationGroupBox);
-		// Ensure the GroupBox row in the main layout has flexible height
-		mainLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 	}
 
 	// Flow control. Save and exit buttons.
 	//ToDo: Centralise buttons to the bottom.
 	private void AddApplicationControlButtons(TableLayoutPanel mainLayoutPanel)
 	{
-		FlowLayoutPanel buttonPanel = new FlowLayoutPanel
-		{
-			FlowDirection = FlowDirection.LeftToRight,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Padding = new Padding(0),
-			Margin = new Padding(0, 0, 0, 0),
-		};
+		FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
+		UIStyling.StyleFlowBox(buttonPanel, FlowDirection.LeftToRight, autoWrap: true);
 
 		// Center-align the content within the FlowLayoutPanel
 		buttonPanel.Anchor = AnchorStyles.None;
@@ -443,28 +458,25 @@ public class LoadStartupConfigForm : Form
 
 		// Create the application table. 
 		TableLayoutPanel tpanelApplications = new TableLayoutPanel();
-		
+
 		var rowStyling = new List<RowStyle> {
 			new RowStyle(SizeType.Percent, 100),
-			new RowStyle(SizeType.AutoSize)    
+			new RowStyle(SizeType.AutoSize)
 		};
 
 		var columnStyling = new List<ColumnStyle> {
 			new ColumnStyle(SizeType.Percent, 100),
-			new ColumnStyle(SizeType.AutoSize)     
-		};				
-				
-		UIStyling.StyleTableLayoutPanel(tpanelApplications, columnCount: 2, rowCount: 2,  customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
+			new ColumnStyle(SizeType.AutoSize)
+		};
+
+		UIStyling.StyleTableLayoutPanel(tpanelApplications, columnCount: 2, rowCount: 2, customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
 
 		// Add list box
 		tpanelApplications.Controls.Add(lstApplications, 0, 0);
 
 		// Create panel for Add/Remove buttons
-		FlowLayoutPanel buttonPanel = new FlowLayoutPanel {
-			FlowDirection = FlowDirection.TopDown,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-		};
+		FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
+		UIStyling.StyleFlowBox(buttonPanel, FlowDirection.TopDown, autoWrap: true, customPadding: new Padding(2,2,2,2), anchorStyle: AnchorStyles.Top);
 
 		buttonPanel.Controls.Add(btnAddApplication);
 		buttonPanel.Controls.Add(btnRemoveApplication);
@@ -474,18 +486,10 @@ public class LoadStartupConfigForm : Form
 		tpanelApplications.Controls.Add(buttonPanel, 1, 0);
 
 		// Add arrow buttons
-		// Create arrow buttons panel. Flow Layout for easy HAlign.
-		FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel {
-			FlowDirection = FlowDirection.LeftToRight,
-			Anchor = AnchorStyles.Right,
-			AutoSize = true,
-			Margin = new Padding(0),
-			Padding = new Padding(0),
-		};
+		FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel();
+		UIStyling.StyleFlowBox(fpanelApplicationArrows, FlowDirection.LeftToRight, autoWrap: true, customPadding: new Padding(1,1,5,1), anchorStyle: AnchorStyles.Right);
 
 		// Create the arrow buttons.
-		btnMoveUp.Margin = new Padding(0, 0, 1, 0);
-		btnMoveDown.Margin = new Padding(1, 0, 0, 0);
 		fpanelApplicationArrows.Controls.Add(btnMoveUp);
 		fpanelApplicationArrows.Controls.Add(btnMoveDown);
 
@@ -507,7 +511,7 @@ public class LoadStartupConfigForm : Form
 
 	private void AddSeparateActionGroups(TableLayoutPanel mainLayoutPanel)
 	{
-	
+
 		// Create a GroupBox for "Allowed Actions"
 		GroupBox allowedActionsGroupBox = CreateActionsGroupBox(
 			"Allowed Actions",
@@ -540,30 +544,24 @@ public class LoadStartupConfigForm : Form
 	{
 		GroupBox actionsGroupBox = new GroupBox();
 		UIStyling.StyleGroupBox(actionsGroupBox, title);
-	
-		TableLayoutPanel actionsPanel = new TableLayoutPanel();	
-	
-		var rowStyling = new List<RowStyle> {new RowStyle(SizeType.AutoSize)};
+
+		TableLayoutPanel actionsPanel = new TableLayoutPanel();
+
+		var rowStyling = new List<RowStyle> { new RowStyle(SizeType.AutoSize) };
 
 		var columnStyling = new List<ColumnStyle> {
 			new ColumnStyle(SizeType.Percent, 100),
-			new ColumnStyle(SizeType.AutoSize)     
-		};	
-				
-		UIStyling.StyleTableLayoutPanel(actionsPanel, columnCount: 2, rowCount: 1, customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);		
-	
+			new ColumnStyle(SizeType.AutoSize)
+		};
+
+		UIStyling.StyleTableLayoutPanel(actionsPanel, columnCount: 2, rowCount: 1, customRowStyles: rowStyling, customColumnStyles: columnStyling, autoSizeTable: true);
+
 		// Add ListBox to the panel
 		actionsPanel.Controls.Add(listBox, 0, 0);
 
-		// Create a FlowLayoutPanel for the buttons
-		FlowLayoutPanel buttonPanel = new FlowLayoutPanel
-		{
-			FlowDirection = FlowDirection.TopDown,
-			Dock = DockStyle.Fill,
-			AutoSize = true,
-			Margin = new Padding(0),
-			Padding = new Padding(0),
-		};
+		FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
+		UIStyling.StyleFlowBox(buttonPanel, FlowDirection.LeftToRight, autoWrap: true, anchorStyle: AnchorStyles.Top);
+
 
 		// Add buttons to the button panel
 		buttonPanel.Controls.Add(addButton);
@@ -1390,7 +1388,7 @@ public static class UIStyling
 		button.ForeColor = SystemColors.ControlText; // Text color for contrast
 		button.FlatAppearance.BorderSize = 1; // Add a subtle border
 		button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
-		
+
 		AttachHoverEffects(button);
 	}
 
@@ -1400,13 +1398,13 @@ public static class UIStyling
 		button.Font = new Font("Microsoft Sans Serif", 8.5f);
 		button.Width = 120;
 		button.Height = 24;
-		button.Margin = new Padding(1, 1, 1, 1);
+		button.Margin = new Padding(1, 3, 1, 1);
 		button.Padding = new Padding(2, 2, 2, 2);
 		button.BackColor = Color.White; // Distinct button color
 		button.ForeColor = SystemColors.ControlText; // Text color for contrast
 		button.FlatAppearance.BorderSize = 1; // Add a subtle border
 		button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
-		
+
 		AttachHoverEffects(button);
 	}
 
@@ -1415,8 +1413,8 @@ public static class UIStyling
 	{
 		button.Width = 20;
 		button.Height = 20;
-		button.Margin = new Padding(0, 0, 0, 0);
-		button.Padding = new Padding(3, 3, 3, 3);
+		button.Margin = new Padding(1, 0, 1, 0);
+		button.Padding = new Padding(0, 0, 0, 0);
 	}
 
 	// Style for list boxes
@@ -1427,12 +1425,34 @@ public static class UIStyling
 		listBox.ForeColor = Color.Black;
 		listBox.BorderStyle = BorderStyle.FixedSingle;
 		listBox.Dock = DockStyle.Fill;
-		listBox.Height = 120;
-		listBox.Width = 300;
+		listBox.Height = 140;
+		listBox.Width = 250;
 		listBox.Padding = new Padding(5, 5, 5, 0);
 		listBox.Margin = new Padding(5, 5, 5, 0);
 	}
-	
+
+	public static void StyleFlowBox(
+		FlowLayoutPanel flowBox,
+		FlowDirection direction = FlowDirection.TopDown,
+		bool autoWrap = false,
+		Padding? customPadding = null, // Allow optional padding
+		AnchorStyles anchorStyle = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom // Default anchor
+	)
+	{
+		flowBox.FlowDirection = direction; // Set the flow direction
+		flowBox.WrapContents = autoWrap; // Enable or disable wrapping
+		flowBox.Anchor = anchorStyle; // Apply anchor styles
+		flowBox.AutoSize = true; // Automatically resize based on contents
+		flowBox.AutoSizeMode = AutoSizeMode.GrowAndShrink; // Allow resizing as content grows or shrinks
+		flowBox.Padding = new Padding(0); // Default margin
+
+		// Use custom padding if provided, otherwise default to no padding
+		flowBox.Margin = customPadding ?? new Padding(0);
+
+		flowBox.BackColor = Color.WhiteSmoke; // Set the background color
+		flowBox.BorderStyle = BorderStyle.FixedSingle; // Add a subtle border for visual clarity
+	}
+
 	private static void AttachHoverEffects(Button button)
 	{
 		// Change to light blue on hover
@@ -1447,13 +1467,12 @@ public static class UIStyling
 			button.BackColor = Color.White;
 		};
 	}
-	
-	
+
+
 	public static void StyleTableLayoutPanel(
 		TableLayoutPanel tableLayoutPanel,
 		int columnCount,
 		int rowCount,
-		TableLayoutPanelCellBorderStyle cellBorderStyle = TableLayoutPanelCellBorderStyle.None,
 		List<RowStyle> customRowStyles = null,
 		List<ColumnStyle> customColumnStyles = null,
 		bool autoSizeTable = false)
@@ -1463,7 +1482,7 @@ public static class UIStyling
 		tableLayoutPanel.RowCount = rowCount;
 		tableLayoutPanel.Dock = DockStyle.Fill;
 		tableLayoutPanel.Padding = new Padding(0);
-		tableLayoutPanel.Margin = new Padding(0);		
+		tableLayoutPanel.Margin = new Padding(0);
 		tableLayoutPanel.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
 
 		// Allow the table to auto-resize if requested
@@ -1473,8 +1492,8 @@ public static class UIStyling
 		for (int i = 0; i < rowCount; i++)
 		{
 			tableLayoutPanel.RowStyles.Add(
-				i < customRowStyles?.Count 
-					? customRowStyles[i] 
+				i < customRowStyles?.Count
+					? customRowStyles[i]
 					: new RowStyle(SizeType.AutoSize));
 		}
 
@@ -1482,13 +1501,13 @@ public static class UIStyling
 		for (int i = 0; i < columnCount; i++)
 		{
 			tableLayoutPanel.ColumnStyles.Add(
-				i < customColumnStyles?.Count 
-					? customColumnStyles[i] 
+				i < customColumnStyles?.Count
+					? customColumnStyles[i]
 					: new ColumnStyle(SizeType.Percent, 100f / columnCount));
 		}
 	}
 
-	
+
 	public static void StyleGroupBox(GroupBox groupBox, string text = null, int? height = null)
 	{
 		groupBox.Font = new Font("Segoe UI", 10, FontStyle.Bold);
@@ -1508,7 +1527,7 @@ public static class UIStyling
 	}
 
 
-	
+
 	public static void StyleTabControl(TabControl tabControl)
 	{
 		tabControl.Appearance = TabAppearance.FlatButtons; // Set tabs to flat style
@@ -1518,7 +1537,7 @@ public static class UIStyling
 		{
 			// Fill tab background with custom color
 			e.Graphics.FillRectangle(new SolidBrush(Color.WhiteSmoke), e.Bounds);
-			
+
 			// Draw the tab text with custom color
 			TextRenderer.DrawText(
 				e.Graphics,
@@ -1529,6 +1548,6 @@ public static class UIStyling
 			);
 		};
 	}
-	
-	
+
+
 }

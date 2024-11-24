@@ -25,60 +25,48 @@ public class CPHInline
 
     public bool Execute()
     {
-        // Start Execution and create centralised SB instance. 
-        CPH.LogDebug("SBSAM Loaded.");
-		SB.CPH = CPH;
-		SB.args = args;		
-		CPHLogger.LogDebug("Centralised CPH, enabling centralised methods.");
+
+        CPH.LogDebug("Starting SBSAM");
 
         // Attempt to get the handle of the currently active window
-        CPHLogger.LogDebug("Getting Window Details");
         IntPtr activeWindowHandle = GetForegroundWindow();
-        CPHLogger.LogInfo($"activeWindowHandle is {activeWindowHandle}.");
 
         // Check if the window was found
         if (activeWindowHandle == IntPtr.Zero)
         {
-            CPHLogger.LogError("No active window found.");
+            MessageBox.Show("No active window found.");
             return false;
         }
 
         // Get the window title
         StringBuilder windowTitle = new StringBuilder(256);
-        CPHLogger.LogInfo($"windowTitle is {windowTitle}.");
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
         // Get the dimensions of the active window
         if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
         {
-            CPHLogger.LogError("Failed to get window dimensions.");
+            MessageBox.Show("Failed to get window dimensions.");
             return false;
         }
 
         // Start new thread for the form.
-        CPHLogger.LogDebug("Starting main form thread.");
         Thread staThread = new Thread(() =>
         {
-            CPHLogger.LogDebug("Enabling application visual styles.");
             Application.EnableVisualStyles();
 
-            CPHLogger.LogDebug("Populating list of actions.");
+            // Get the global action list
             List<ActionData> actionList = CPH.GetActions();
 
-            
             if (mainFormInstance == null || mainFormInstance.IsDisposed)
             {
-                CPHLogger.LogDebug("Loading a new form.");
                 mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
                 Application.Run(mainFormInstance);
             }
             else
             {
-                CPHLogger.LogDebug("Bringing current form to front.");
                 mainFormInstance.BringToFront();
             }
         });
-
 
         staThread.SetApartmentState(ApartmentState.STA);
         staThread.Start();
@@ -88,7 +76,6 @@ public class CPHInline
 
 public class LoadStartupConfigForm : Form
 {
-	private IInlineInvokeProxy CPH; // Field to hold the CPH object
     private List<ActionData> actionDataList;
 
     //SB_SAM Startup Configuration Buttons.
@@ -161,23 +148,17 @@ public class LoadStartupConfigForm : Form
         actionDataList = actions;
 
         // Build the core form layout
-        CPHLogger.LogDebug("Building base form structure.");
         var tabControl = BuildCoreForm(activeWindowRect);
 
         // Add tabs with specific configurations
-        CPHLogger.LogDebug("Calling AddTabWithControls for the Streamer Bot Started tab");
         AddTabWithControls(tabControl, "Startup", AddStartupTabControls);
-        CPHLogger.LogDebug("Calling AddTabWithControls for the Stream Ending tab");
         //AddTabWithControls(tabControl, "Stream Ending", AddStreamEndingTabControls);
-        CPHLogger.LogDebug("Calling AddTabWithControls for the Support Me tab");
         //AddTabWithControls(tabControl, "Support", AddSupportTabControls);
 
         // Initialize controls with styles
-        CPHLogger.LogDebug("Calling InitialiseControls.");
-        InitialiseControls();
+        InitializeControls();
 
         // Add TabControl to the form
-        CPHLogger.LogDebug("Adding TabControl to the base form.");
         this.Controls.Add(tabControl);
     }
 
@@ -188,36 +169,23 @@ public class LoadStartupConfigForm : Form
         Action<TabPage> addControls
     )
     {
-        CPHLogger.LogDebug($"Creating tab page: {title}");
         var tabPage = CreateTabPage(title);
-        CPHLogger.LogDebug($"Adding tab controls: {title}");
-        addControls(tabPage); 
-        CPHLogger.LogDebug($"Adding tab page to form: {title}");
+        addControls(tabPage); // Add specific controls to the tab
         tabControl.TabPages.Add(tabPage);
     }
 
-    private void InitialiseControls()
+    private void InitializeControls()
     {
         // Apply consistent styling for other controls
-        CPHLogger.LogDebug("Calling: StyleFormUserActionControls");
         StyleFormUserActionControls();
-
-        CPHLogger.LogDebug("Calling: StyleApplicationListControls");
         StyleApplicationListControls();
-
-        CPHLogger.LogDebug("Calling: StyleActionListsControls");
         StyleActionListsControls();
-
-        CPHLogger.LogDebug("Calling: StyleStartupConfigControls");
         StyleStartupConfigControls();
-
-        CPHLogger.LogDebug("Calling: StyleFormFlowControls");
         StyleFormFlowControls();
     }
 
     private void StyleStartupConfigControls()
     {
-        CPHLogger.LogDebug("Styling Start Up Config Controls.");
         UIStyling.StyleRadioButton(radioStartupConfigYes, "Yes");
         UIStyling.StyleRadioButton(radioStartupConfigNo, "No");
         UIStyling.StyleRadioButton(radioStartupConfigPrompt, "Prompt");
@@ -226,7 +194,6 @@ public class LoadStartupConfigForm : Form
     // Generic method to apply styling to application-related controls
     private void StyleApplicationListControls()
     {
-        CPHLogger.LogDebug("Styling Application List Controls.");
         UIStyling.StyleListBox(lstApplications);
         UIStyling.StyleLongerButton(btnAddApplication);
         UIStyling.StyleLongerButton(btnAddApplicationPath);
@@ -238,7 +205,6 @@ public class LoadStartupConfigForm : Form
     // Generic method to apply styling to action-related controls
     private void StyleActionListsControls()
     {
-        CPHLogger.LogDebug("Styling Action List Controls.");
         UIStyling.StyleListBox(lstActionsPermitted);
         UIStyling.StyleLongerButton(btnAddActionPermitted);
         UIStyling.StyleLongerButton(btnRemoveActionPermitted);
@@ -251,7 +217,6 @@ public class LoadStartupConfigForm : Form
     private void StyleFormUserActionControls()
     {
         // Top Controls.
-        CPHLogger.LogDebug("Styling Form Interaction Controls.");
         UIStyling.StyleMainButton(btnResetAllSettings);
         UIStyling.StyleMainButton(btnImportSettings);
         UIStyling.StyleMainButton(btnExportSettings);
@@ -261,7 +226,6 @@ public class LoadStartupConfigForm : Form
 
     private void StyleFormFlowControls()
     {
-        CPHLogger.LogDebug("Styling Form Flow Controls.");
         UIStyling.StyleMainButton(btnCloseForm);
         UIStyling.StyleMainButton(btnSaveForm);
     }
@@ -270,50 +234,40 @@ public class LoadStartupConfigForm : Form
     private TabControl BuildCoreForm(Rectangle activeWindowRect)
     {
         // Configure form properties
-        CPHLogger.LogDebug("[BuildCoreForm][S] Setting Form Name");
         this.Text = Constants.FormName;
-        CPHLogger.LogInfo($"Form Name: {this.Text}");
-
-        CPHLogger.LogDebug("[BuildCoreForm] Setting Form base Size");
-        this.Width = 600;
-        this.Height = 800;
-        CPHLogger.LogInfo($"Form Size. W:{this.Width} H:{this.Height}");
-
-        CPHLogger.LogDebug("[BuildCoreForm] Setting Auto Size Properties");
-        this.AutoSize = true;
-        this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-
-        CPHLogger.LogDebug("[BuildCoreForm] Setting a minimum size.");
-        this.MinimumSize = new Size(600, 600);
-        CPHLogger.LogInfo($"Form Size. W:{this.Width} H:{this.Height}");
-        
-        CPHLogger.LogDebug("[BuildCoreForm] Setting base form styling.");
+        // this.Width = 600;
+        // this.Height = 800;
         this.BackColor = Color.WhiteSmoke;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
-        CPHLogger.LogDebug("[BuildCoreForm] Calling CenterForm.");
+        this.AutoSize = true;
+        this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+
+        // Set minimum size to prevent the form from being too small
+        this.MinimumSize = new Size(600, 600);
+
         CenterForm(activeWindowRect);
 
         // Create the TabControl with styling
-        CPHLogger.LogDebug("[BuildCoreForm] Creating new TabControl.");
-        var tabControl = new TabControl();
-        CPHLogger.LogDebug("[BuildCoreForm] Calling UIStyling.StyleTabControl.");
+        var tabControl = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Segoe UI", 10, FontStyle.Regular),
+            Padding = new Point(5, 5),
+        };
+
+        // Apply custom styling using the UIStyling helper
         UIStyling.StyleTabControl(tabControl);
 
-        CPHLogger.LogDebug("[BuildCoreForm] Return TabControl");
         return tabControl;
     }
 
     private void CenterForm(Rectangle activeWindowRect)
     {
         // Center the form on the screen
-        CPHLogger.LogInfo($"[CenterForm][S] Getting center coordinates. {activeWindowRect.ToString()}");
         int centerX = activeWindowRect.Left + (activeWindowRect.Width - this.Width) / 2;
         int centerY = activeWindowRect.Top + (activeWindowRect.Height - this.Height) / 2;
-        CPHLogger.LogInfo($"[CenterForm] Coordinates: X:{centerX} / Y:{centerY}");
-
-        CPHLogger.LogDebug("[BuildCoreForm] Placing form location, and ordering");
         this.Location = new Point(centerX, centerY);
         this.TopMost = true;
     }
@@ -321,33 +275,35 @@ public class LoadStartupConfigForm : Form
     // Helper method to create a new tab page with common padding
     private TabPage CreateTabPage(string title)
     {
-        CPHLogger.LogInfo($"[CreateTabPage][S] Creating new Tab Page for: {title}");
         return new TabPage(title) { Padding = new Padding(10) };
     }
 
     // General method to create a layout panel for any tab
     private TableLayoutPanel CreateLayoutPanel(int columnCount = 1, int rowCount = 6)
     {
-        CPHLogger.LogInfo($"[TableLayoutPanel][S] Starting Base Tab Table Creation. Cols: {columnCount} Rows: {rowCount}");
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            Padding = new Padding(2, 2, 2, 2),
+            Padding = new Padding(3, 3, 3, 3),
             Margin = new Padding(2, 2, 2, 2),
             ColumnCount = columnCount,
             RowCount = rowCount,
             CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
         };
 
-        CPHLogger.LogDebug("[TableLayoutPanel] Returning Table Panel");
         return panel;
     }
 
     // Adding specific controls to the "Startup" tab
     private void AddStartupTabControls(TabPage startupTab)
     {
-        CPHLogger.LogDebug("[AddStartupTabControls][S] Starting AddStartupTabControls");
+
+
+        CPHInline instance = new CPHInline();
+        instance.CPH.LogDebug("string logLine");
+
+
         var scrollablePanel = new Panel
         {
             Dock = DockStyle.Fill,
@@ -355,69 +311,78 @@ public class LoadStartupConfigForm : Form
             BackColor = Color.WhiteSmoke,
         };
 
-        CPHLogger.LogDebug("[AddStartupTabControls] Calling Create Layout Panel.");
         var mainLayoutPanel = CreateLayoutPanel();
 
         // Add controls to the layout panel
-        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddConfigurationControls.");
         AddConfigurationControls(mainLayoutPanel);
-        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddApplicationControls.");
         AddApplicationControls(mainLayoutPanel);
-        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddSeparateActionGroups.");
         AddSeparateActionGroups(mainLayoutPanel);
-        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddStartupConfigurationControls.");
         AddStartupConfigurationControls(mainLayoutPanel);
-        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddApplicationControlButtons.");
         AddApplicationControlButtons(mainLayoutPanel);
 
         // Add the layout panel to the scrollable panel
-        CPHLogger.LogDebug("[AddStartupTabControls] Adding Layout Panel to the Scrollable Panel.");
         scrollablePanel.Controls.Add(mainLayoutPanel);
 
         // Dynamically calculate the minimum size for the scrollable panel
-        CPHLogger.LogDebug("[AddStartupTabControls] SetMinimumSizeBasedOnChildControls.");
         SetMinimumSizeBasedOnChildControls(mainLayoutPanel, scrollablePanel);
 
         // Add the scrollable panel to the tab
-        CPHLogger.LogInfo($"[AddStartupTabControls] Adding the scrollable panel to the tab page. Size: {scrollablePanel.Size}");
         startupTab.Controls.Add(scrollablePanel);
     }
 
+    /// <summary>
+    /// Dynamically calculates and sets the MinimumSize of a container based on its child controls.
+    /// Ensures all controls are visible, and scrollbars are used when content exceeds the panel's size.
+    /// </summary>
+    /// <param name="content">The layout panel containing all controls.</param>
+    /// <param name="container">The scrollable container (must be a Panel).</param>
+    /// <summary>
+    /// Dynamically calculates and sets the MinimumSize of a container based on its child controls.
+    /// Ensures all controls are visible, including nested ones, and scrollbars are used when content exceeds the panel's size.
+    /// </summary>
+    /// <param name="content">The layout panel containing all controls.</param>
+    /// <param name="container">The scrollable container (must be a Panel).</param>
+    /// <param name="buffer">Optional buffer (in pixels) to add around the calculated size. Default is 10 pixels.</param>
     private void SetMinimumSizeBasedOnChildControls(Control content, Panel container, int buffer = 10 )
     {
-        CPHLogger.LogDebug("[SetMinimumSizeBasedOnChildControls][S] Starting SetMinimumSizeBasedOnChildControls");
+        // Log entry into the method
+        CPHInline instance = new CPHInline();
+        instance.CPH.LogDebug("Entering SetMinimumSizeBasedOnChildControls");
+
+        if (content == null || container == null)
+        {
+            instance.CPH.LogDebug("No content / container");
+            return;
+        }
+
         // Tracks the maximum width and height
         int maxWidth = 0;
         int maxHeight = 0;
 
-        CPHLogger.LogDebug("[SetMinimumSizeBasedOnChildControls] Processing Controls.");
         // Method to recursively process all controls
         void ProcessControl(Control control)
         {
-            CPHLogger.LogInfo($"[ProcessControl] Control Details: {control.ToString()}");
+            // Log control name and its dimensions
+            instance.CPH.LogDebug($"Processing control: {control.Name ?? "Unnamed Control"}, Location: {control.Location}");
+
             // Calculate right and bottom edges for the control
             int controlRight = control.Right + control.Margin.Right;
             int controlBottom = control.Bottom + control.Margin.Bottom;
-            CPHLogger.LogInfo($"[ProcessControl] Control Details. Right Control: {control.Right} Right Margin: {control.Margin.Right} Right Total: {controlRight}");
-            CPHLogger.LogInfo($"[ProcessControl] Control Details. Bottom Control: {control.Bottom} Bottom Margin: {control.Margin.Bottom} Bottom Total: {controlBottom}");
 
             // Update the maximum dimensions
             maxWidth = Math.Max(maxWidth, controlRight);
             maxHeight = Math.Max(maxHeight, controlBottom);
-            CPHLogger.LogInfo($"[ProcessControl] Max Dimensions. Width: {maxWidth} Height: {maxHeight}.");
 
             // Recursively process nested controls
             foreach (Control child in control.Controls)
             {
-                CPHLogger.LogInfo($"[ProcessControl] Nested Child Processing. {child.ToString()}.");                                
                 ProcessControl(child);
-            }            
+            }
         }
 
         // Process each child control recursively
         foreach (Control child in content.Controls)
         {
-            CPHLogger.LogInfo($"[ProcessControl] Unnested Child Processing. {child.ToString()}.");                                
             ProcessControl(child);
         }
 
@@ -425,16 +390,18 @@ public class LoadStartupConfigForm : Form
         maxWidth += buffer;
         maxHeight += buffer;
 
-		CPHLogger.LogInfo($"Max Height: {maxWidth}.");
-        CPHLogger.LogInfo($"Max Height: {maxHeight}.");
 
         // Apply the calculated size
-        CPHLogger.LogDebug($"Update content sizes: {maxHeight}.");
         content.MinimumSize = new Size(maxWidth, maxHeight);
         container.MinimumSize = new Size(maxWidth, maxHeight);
-        container.AutoScrollMinSize = new Size(maxWidth, maxHeight);       
+        container.AutoScrollMinSize = new Size(maxWidth, maxHeight);
 
+        
     }
+
+    // Add controls for other tabs (Stream Ending and Support) similarly...
+
+
 
 
     /* STARTUP TAB
@@ -1649,9 +1616,6 @@ public static class UIStyling
 
     public static void StyleTabControl(TabControl tabControl)
     {
-        tabControl.Dock = DockStyle.Fill;
-        tabControl.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-        tabControl.Padding = new Point(5, 5);
         tabControl.Appearance = TabAppearance.FlatButtons; // Set tabs to flat style
         tabControl.ItemSize = new Size(120, 20); // Custom size for each tab
         tabControl.DrawMode = TabDrawMode.OwnerDrawFixed; // Enable custom drawing
@@ -1672,126 +1636,19 @@ public static class UIStyling
     }
 }
 
-
 public static class FormResizer
 {
     public static void ResizeFormToFitContent(Form form)
     {
-        // Log the initial form size
-        CPHLogger.LogInfo($"[ResizeFormToFitContent] Initial Form Size: Width={form.Width}, Height={form.Height}.");
-
-        // Calculate the required height and width by including all nested controls
-        int requiredHeight = CalculateDynamicHeight(form.Controls, out int requiredWidth);
-
-        CPHLogger.LogInfo($"[ResizeFormToFitContent] Calculated Required Dimensions: Height={requiredHeight}, Width={requiredWidth}.");
-
-        // Adjust form size based on calculated dimensions
-        if (requiredHeight > form.Height || requiredWidth > form.Width)
+        int requiredHeight = form
+            .Controls.OfType<Control>()
+            .Sum(control => control.PreferredSize.Height + control.Margin.Vertical);
+        if (requiredHeight > form.Height)
         {
-            form.Height = Math.Min(requiredHeight + 50, Screen.PrimaryScreen.WorkingArea.Height); // Add a buffer of 50
-            form.Width = Math.Min(requiredWidth + 50, Screen.PrimaryScreen.WorkingArea.Width);
-            CPHLogger.LogInfo($"[ResizeFormToFitContent] Resized Form Size: Width={form.Width}, Height={form.Height}.");
+            form.Height = Math.Min(requiredHeight + 50, Screen.PrimaryScreen.WorkingArea.Height);
         }
-        else
-        {
-            CPHLogger.LogInfo("[ResizeFormToFitContent] Current size is sufficient. No adjustment needed.");
-        }
-
-        // Log the final form size
-        CPHLogger.LogInfo($"[ResizeFormToFitContent] Final Form Size: Width={form.Width}, Height={form.Height}.");
-    }
-
-    public static int CalculateDynamicHeight(Control.ControlCollection controls, out int totalWidth, int buffer = 10)
-    {
-        int totalHeight = 0; // Tracks the total height needed for all controls
-        int maxWidth = 0;    // Tracks the maximum width required by the controls
-
-        // Local function to process each container's child controls
-        void ProcessContainer(Control container)
-        {
-            int rowMaxHeight = 0; // Tracks the tallest control in the current row
-            int currentRowY = -1; // Tracks the Y coordinate of the current row (to detect new rows)
-
-            foreach (Control control in container.Controls)
-            {
-                // Log control processing
-                CPHLogger.LogDebug($"[CalculateDynamicHeight] Processing Control: Name={control.Name}, Type={control.GetType().Name}");
-
-                // Get the control's height and width, including margins
-                int controlHeight = control.PreferredSize.Height + control.Margin.Vertical;
-                int controlWidth = control.PreferredSize.Width + control.Margin.Horizontal;
-
-                // Log the individual control's dimensions
-                CPHLogger.LogInfo($"[CalculateDynamicHeight] Control Details: Name={control.Name}, Height={controlHeight}, Width={controlWidth}, Top={control.Top}, Left={control.Left}");
-
-                // Overlap detection with other controls in the container
-                foreach (Control child in container.Controls)
-                {
-                    if (control != child && control.Bounds.IntersectsWith(child.Bounds))
-                    {
-                        CPHLogger.LogWarn($"[Overlap Detected] Control '{control.Name}' overlaps with '{child.Name}'.");
-                    }
-                }
-
-                // If this control is part of a new row, add the previous row's max height to totalHeight
-                if (currentRowY != -1 && control.Top > currentRowY)
-                {
-                    totalHeight += rowMaxHeight;
-                    CPHLogger.LogInfo($"[CalculateDynamicHeight] Adding Row Max Height: {rowMaxHeight}, Total Height So Far: {totalHeight}");
-                    rowMaxHeight = 0; // Reset for the new row
-                }
-
-                // Update row tracker and max height
-                currentRowY = control.Top;
-                rowMaxHeight = Math.Max(rowMaxHeight, controlHeight);
-
-                // Update the maximum width
-                maxWidth = Math.Max(maxWidth, control.Right);
-            }
-
-            // Add the last row's max height
-            totalHeight += rowMaxHeight;
-            CPHLogger.LogInfo($"[CalculateDynamicHeight] Final Row Max Height: {rowMaxHeight}, Total Height After Rows: {totalHeight}");
-        }
-
-        // Process each control recursively
-        foreach (Control control in controls)
-        {
-            if (control is ContainerControl container)
-            {
-                CPHLogger.LogDebug($"[CalculateDynamicHeight] Found Container Control: {control.Name}");
-                ProcessContainer(container);
-            }
-            else
-            {
-                // For standalone controls
-                int controlHeight = control.PreferredSize.Height + control.Margin.Vertical;
-                int controlWidth = control.PreferredSize.Width + control.Margin.Horizontal;
-
-                // Log standalone control dimensions
-                CPHLogger.LogInfo($"[CalculateDynamicHeight] Standalone Control Details: Name={control.Name}, Height={controlHeight}, Width={controlWidth}");
-
-                totalHeight += controlHeight;
-                maxWidth = Math.Max(maxWidth, controlWidth);
-            }
-        }
-
-        // Add a buffer for better spacing
-        totalHeight += buffer;
-        maxWidth += buffer;
-
-        // Log final calculated dimensions
-        CPHLogger.LogInfo($"[CalculateDynamicHeight] Total Calculated Dimensions: Height={totalHeight}, Width={maxWidth}");
-
-        totalWidth = maxWidth;
-        return totalHeight;
     }
 }
-
-
-
-
-
 
 public static class Constants
 {
@@ -1809,68 +1666,4 @@ public static class Constants
         No,
         Prompt,
     }
-}
-
-
-public class CPHLogger : SB
-{
-    // LogDebug: Logs a debug-level message.
-    public static void LogDebug(string message)
-    {
-        CPH.LogDebug($"[DEBUG] {message}");
-    }
-
-    // LogError: Logs an error-level message.
-    public static void LogError(string message)
-    {
-        CPH.LogError($"[ERROR] {message}");
-    }
-
-    // LogInfo: Logs an info-level message.
-    public static void LogInfo(string message)
-    {
-        CPH.LogInfo($"[INFO] {message}");
-    }
-
-    // LogVerbose: Logs a verbose-level message.
-    public static void LogVerbose(string message)
-    {
-        CPH.LogVerbose($"[VERBOSE] {message}");
-    }
-
-    // LogWarn: Logs a warning-level message.
-    public static void LogWarn(string message)
-    {
-        CPH.LogWarn($"[WARN] {message}");
-    }
-
-    // Log: General logging method that dynamically adjusts log level.
-    public static void Log(string message, string logLevel = "INFO")
-    {
-        switch (logLevel.ToUpper())
-        {
-            case "DEBUG":
-                LogDebug(message);
-                break;
-            case "ERROR":
-                LogError(message);
-                break;
-            case "VERBOSE":
-                LogVerbose(message);
-                break;
-            case "WARN":
-                LogWarn(message);
-                break;
-            default:
-                LogInfo(message);
-                break;
-        }
-    }
-}
-
-
-public class SB
-{
-    public static IInlineInvokeProxy CPH;
-    public static Dictionary<string, object> args;
 }

@@ -497,10 +497,6 @@ public class LoadStartupConfigForm : Form
 
         // Add the button panel to the main layout panel
         mainLayoutPanel.Controls.Add(buttonPanel);
-        mainLayoutPanel.SetCellPosition(
-            buttonPanel,
-            new TableLayoutPanelCellPosition(0, mainLayoutPanel.RowCount - 1)
-        );
     }
 
     private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)

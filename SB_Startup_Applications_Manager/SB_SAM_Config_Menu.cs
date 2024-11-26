@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
+using System.ComponentModel; // For TypeDescriptor and EventDescriptor
+using System.Reflection;     // For BindingFlags
 
 public class CPHInline
 {
@@ -59,25 +61,39 @@ public class CPHInline
         CPHLogger.LogDebug("Starting main form thread.");
         Thread staThread = new Thread(() =>
         {
-            CPHLogger.LogDebug("Enabling application visual styles.");
-            Application.EnableVisualStyles();
-
-            CPHLogger.LogDebug("Populating list of actions.");
-            List<ActionData> actionList = CPH.GetActions();
-
-            
-            if (mainFormInstance == null || mainFormInstance.IsDisposed)
+            try
             {
-                CPHLogger.LogDebug("Loading a new form.");
-                mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
-                Application.Run(mainFormInstance);
+                CPHLogger.LogDebug("Enabling application visual styles.");
+                Application.EnableVisualStyles();
+
+                CPHLogger.LogDebug("Populating list of actions.");
+                List<ActionData> actionList = CPH.GetActions();
+
+                if (mainFormInstance == null || mainFormInstance.IsDisposed)
+                {
+                    CPHLogger.LogDebug("Loading a new form.");
+                    mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
+
+                    // Add a catch-all handler for unhandled exceptions in the form
+                    Application.ThreadException += (sender, args) =>
+                    {
+                        CPHLogger.LogError($"Unhandled exception in STA thread: {args.Exception.Message}\n{args.Exception.StackTrace}");
+                    };
+
+                    Application.Run(mainFormInstance);
+                }
+                else
+                {
+                    CPHLogger.LogDebug("Bringing current form to front.");
+                    mainFormInstance.BringToFront();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                CPHLogger.LogDebug("Bringing current form to front.");
-                mainFormInstance.BringToFront();
+                CPHLogger.LogError($"Unhandled exception in STA thread: {ex.Message}\n{ex.StackTrace}");
             }
         });
+
 
 
         staThread.SetApartmentState(ApartmentState.STA);
@@ -88,69 +104,53 @@ public class CPHInline
 
 public class LoadStartupConfigForm : Form
 {
-	private IInlineInvokeProxy CPH; // Field to hold the CPH object
+     // Field to hold the CPH object
+	private IInlineInvokeProxy CPH;
+
+    // List of the actions available in streamerbot. 
     private List<ActionData> actionDataList;
 
+    // Index holder for the list boxes. 
+    private int indexOfListItem;
+
+
     //SB_SAM Startup Configuration Buttons.
+    private Label lblStartupConfigDelay = new Label(); 
     private RadioButton radioStartupConfigYes = new RadioButton();
     private RadioButton radioStartupConfigNo = new RadioButton();
     private RadioButton radioStartupConfigPrompt = new RadioButton();
+    private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown();
 
-    private Label lblStartupConfigDelay = new Label
-    {
-        Text = "Delay (In seconds)",
-        AutoSize = true,
-        Dock = DockStyle.Fill,
-        TextAlign = ContentAlignment.MiddleLeft,
-    };
-
-    private NumericUpDown numupdwnStartupConfigDelay = new NumericUpDown
-    {
-        Width = 40,
-        Minimum = 0,
-        Maximum = 30,
-        Value = 2,
-        Anchor = AnchorStyles.Left,
-        Margin = new Padding(2, 0, 0, 0),
-    };
-
-    private int indexOfListItem;
 
     // Application Start-up IO's.
     private ListBox lstApplications = new ListBox();
-    private Button btnAddApplication = new Button { Text = "Add Application" };
-    private Button btnAddApplicationPath = new Button { Text = "Add Path" };
-    private Button btnRemoveApplication = new Button
-    {
-        Text = "Remove Application",
-        Enabled = false,
-    };
-    private Button btnMoveUp = new Button { Text = "▲" };
-    private Button btnMoveDown = new Button { Text = "▼" };
+    private Button btnAddApplication = new Button ();
+    private Button btnAddApplicationPath = new Button();
+    private Button btnRemoveApplication = new Button(); 
+
+    private Button btnMoveUp = new Button(); 
+    private Button btnMoveDown = new Button(); 
 
     // Actions Startup Permitted IO's
     private ListBox lstActionsPermitted = new ListBox();
-    private Button btnAddActionPermitted = new Button { Text = "Add Action" };
-    private Button btnRemoveActionPermitted = new Button
-    {
-        Text = "Remove Action",
-        Enabled = false,
-    };
+    private Button btnAddActionPermitted = new Button();
+    private Button btnRemoveActionPermitted = new Button(); 
+    
 
     private ListBox lstActionsBlocked = new ListBox();
-    private Button btnAddActionBlocked = new Button { Text = "Add Action" };
-    private Button btnRemoveActionBlocked = new Button { Text = "Remove Action", Enabled = false };
+    private Button btnAddActionBlocked = new Button();
+    private Button btnRemoveActionBlocked = new Button();
 
     //User Settings Controls
-    private Button btnResetAllSettings = new Button { Text = "Remove All" };
-    private Button btnImportSettings = new Button { Text = "Import" };
-    private Button btnExportSettings = new Button { Text = "Export" };
+    private Button btnResetAllSettings = new Button();
+    private Button btnImportSettings = new Button();
+    private Button btnExportSettings = new Button();
 
     // Main Form Controls.
-    private Button btnSaveForm = new Button { Text = "Save", Enabled = false };
-    private Button btnCloseForm = new Button { Text = "Close" };
-    private Button btnShowAbout = new Button { Text = "About" };
-    private Button btnTestConfig = new Button { Text = "Test" };
+    private Button btnSaveForm = new Button();
+    private Button btnCloseForm = new Button();
+    private Button btnShowAbout = new Button();
+    private Button btnTestConfig = new Button();
 
     // Tooltips.
     private ToolTip toolTip = new ToolTip();
@@ -228,11 +228,11 @@ public class LoadStartupConfigForm : Form
     {
         CPHLogger.LogDebug("Styling Application List Controls.");
         UIStyling.StyleListBox(lstApplications);
-        UIStyling.StyleLongerButton(btnAddApplication);
-        UIStyling.StyleLongerButton(btnAddApplicationPath);
-        UIStyling.StyleLongerButton(btnRemoveApplication);
-        UIStyling.StyleArrowButton(btnMoveUp);
-        UIStyling.StyleArrowButton(btnMoveDown);
+        UIStyling.StyleBtn(btn: btnAddApplication, btnText: "Add Application", btnType: 2);
+        UIStyling.StyleBtn(btn: btnRemoveApplication, btnText: "Remove Application", btnType: 2, btnEnabled: false);
+        UIStyling.StyleBtn(btn: btnAddApplicationPath, btnText: "Add Path", btnType: 2);        
+        UIStyling.StyleArrowBtn(btnMoveUp, btnArrow: "▲");
+        UIStyling.StyleArrowBtn(btnMoveDown, btnArrow: "▼");
     }
 
     // Generic method to apply styling to action-related controls
@@ -240,11 +240,13 @@ public class LoadStartupConfigForm : Form
     {
         CPHLogger.LogDebug("Styling Action List Controls.");
         UIStyling.StyleListBox(lstActionsPermitted);
-        UIStyling.StyleLongerButton(btnAddActionPermitted);
-        UIStyling.StyleLongerButton(btnRemoveActionPermitted);
+        UIStyling.StyleBtn(btn: btnAddActionPermitted, btnText: "Add Action", btnType: 2);
+        UIStyling.StyleBtn(btn: btnRemoveActionPermitted, btnText: "Remove Action", btnType: 2, btnEnabled: false);
+
         UIStyling.StyleListBox(lstActionsBlocked);
-        UIStyling.StyleLongerButton(btnAddActionBlocked);
-        UIStyling.StyleLongerButton(btnRemoveActionBlocked);
+        UIStyling.StyleBtn(btn: btnAddActionBlocked, btnText: "Add Action", btnType: 2);
+        UIStyling.StyleBtn(btn: btnRemoveActionBlocked, btnText: "Remove Action", btnType: 2, btnEnabled: false);
+
     }
 
     // Generic method to apply styling to form control buttons
@@ -252,52 +254,50 @@ public class LoadStartupConfigForm : Form
     {
         // Top Controls.
         CPHLogger.LogDebug("Styling Form Interaction Controls.");
-        UIStyling.StyleMainButton(btnResetAllSettings);
-        UIStyling.StyleMainButton(btnImportSettings);
-        UIStyling.StyleMainButton(btnExportSettings);
-        UIStyling.StyleMainButton(btnShowAbout);
-        UIStyling.StyleMainButton(btnTestConfig);
+        UIStyling.StyleBtn(btnResetAllSettings, btnText: "Remove All");
+        UIStyling.StyleBtn(btnImportSettings, btnText: "Import");
+        UIStyling.StyleBtn(btnExportSettings, btnText: "Export");
+        UIStyling.StyleBtn(btnShowAbout, btnText: "About");
+        UIStyling.StyleBtn(btnTestConfig, btnText: "Test");
     }
 
     private void StyleFormFlowControls()
     {
         CPHLogger.LogDebug("Styling Form Flow Controls.");
-        UIStyling.StyleMainButton(btnCloseForm);
-        UIStyling.StyleMainButton(btnSaveForm);
+        UIStyling.StyleBtn(btnCloseForm, btnText: "Close", btnMargin: new Padding(5, 2, 5, 2), btnPadding: new Padding(5, 0, 5, 0));
+        UIStyling.StyleBtn(btnSaveForm, btnText: "Save", btnMargin: new Padding(5, 2, 5, 2), btnPadding: new Padding(5, 0, 5, 0));
     }
 
     // Refactored BuildCoreForm to make it cleaner
     private TabControl BuildCoreForm(Rectangle activeWindowRect)
     {
-        // Configure form properties
-        CPHLogger.LogDebug("[BuildCoreForm][S] Setting Form Name");
+        CPHLogger.LogDebug("[BuildCoreForm][S]");
+
         this.Text = Constants.FormName;
         CPHLogger.LogInfo($"Form Name: {this.Text}");
 
-        CPHLogger.LogDebug("[BuildCoreForm] Setting Form base Size");
-        this.Width = 600;
-        this.Height = 800;
-        CPHLogger.LogInfo($"Form Size. W:{this.Width} H:{this.Height}");
+        //this.Width = 600;
+        //this.Height = 800;
+        CPHLogger.LogInfo($"Form Base Size. W:{this.Width} H:{this.Height}");
 
-        CPHLogger.LogDebug("[BuildCoreForm] Setting Auto Size Properties");
         this.AutoSize = true;
         this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        CPHLogger.LogDebug("[BuildCoreForm] Setting Auto Size Properties");
 
-        CPHLogger.LogDebug("[BuildCoreForm] Setting a minimum size.");
         this.MinimumSize = new Size(600, 600);
-        CPHLogger.LogInfo($"Form Size. W:{this.Width} H:{this.Height}");
+        CPHLogger.LogInfo($"Form MinimumSize Set. W:{this.Width} H:{this.Height}");
         
-        CPHLogger.LogDebug("[BuildCoreForm] Setting base form styling.");
+        CPHLogger.LogDebug("[BuildCoreForm] Setting base form styling.");        
         this.BackColor = Color.WhiteSmoke;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-
+        
         CPHLogger.LogDebug("[BuildCoreForm] Calling CenterForm.");
-        CenterForm(activeWindowRect);
+        CenterForm(activeWindowRect);       
 
-        // Create the TabControl with styling
         CPHLogger.LogDebug("[BuildCoreForm] Creating new TabControl.");
         var tabControl = new TabControl();
+
         CPHLogger.LogDebug("[BuildCoreForm] Calling UIStyling.StyleTabControl.");
         UIStyling.StyleTabControl(tabControl);
 
@@ -322,7 +322,7 @@ public class LoadStartupConfigForm : Form
     private TabPage CreateTabPage(string title)
     {
         CPHLogger.LogInfo($"[CreateTabPage][S] Creating new Tab Page for: {title}");
-        return new TabPage(title) { Padding = new Padding(10) };
+        return new TabPage(title) { Padding = new Padding(2, 5, 2, 2) };
     }
 
     // General method to create a layout panel for any tab
@@ -351,6 +351,7 @@ public class LoadStartupConfigForm : Form
         var scrollablePanel = new Panel
         {
             Dock = DockStyle.Fill,
+            AutoSize = true,
             AutoScroll = true,
             BackColor = Color.WhiteSmoke,
         };
@@ -371,68 +372,38 @@ public class LoadStartupConfigForm : Form
         AddApplicationControlButtons(mainLayoutPanel);
 
         // Add the layout panel to the scrollable panel
-        CPHLogger.LogDebug("[AddStartupTabControls] Adding Layout Panel to the Scrollable Panel.");
+        CPHLogger.LogDebug($"[AddStartupTabControls] Adding Layout Panel to the Scrollable Panel. {mainLayoutPanel.Size}");
         scrollablePanel.Controls.Add(mainLayoutPanel);
 
         // Dynamically calculate the minimum size for the scrollable panel
-        CPHLogger.LogDebug("[AddStartupTabControls] SetMinimumSizeBasedOnChildControls.");
-        SetMinimumSizeBasedOnChildControls(mainLayoutPanel, scrollablePanel);
+        //CPHLogger.LogDebug("[AddStartupTabControls] SetMinimumSizeBasedOnChildControls.");
+        //SetMinimumSizeBasedOnChildControls(mainLayoutPanel, scrollablePanel);
 
         // Add the scrollable panel to the tab
         CPHLogger.LogInfo($"[AddStartupTabControls] Adding the scrollable panel to the tab page. Size: {scrollablePanel.Size}");
         startupTab.Controls.Add(scrollablePanel);
-    }
 
-    private void SetMinimumSizeBasedOnChildControls(Control content, Panel container, int buffer = 10 )
-    {
-        CPHLogger.LogDebug("[SetMinimumSizeBasedOnChildControls][S] Starting SetMinimumSizeBasedOnChildControls");
-        // Tracks the maximum width and height
-        int maxWidth = 0;
-        int maxHeight = 0;
+        mainLayoutPanel.PerformLayout();
+        scrollablePanel.PerformLayout();
 
-        CPHLogger.LogDebug("[SetMinimumSizeBasedOnChildControls] Processing Controls.");
-        // Method to recursively process all controls
-        void ProcessControl(Control control)
+        // Log the layout panel height after forcing layout
+        CPHLogger.LogInfo($"[AddStartupTabControls] Main Layout Panel Height (After Layout): {mainLayoutPanel.Height}");
+        CPHLogger.LogInfo($"[AddStartupTabControls] Scrollable Panel Height (After Layout): {scrollablePanel.Height}");
+        
+        // Add the scrollable panel to the tab
+        startupTab.Controls.Add(scrollablePanel);
+
+        // Log the height of the tab page containing the layout panel
+        CPHLogger.LogInfo($"[AddStartupTabControls] Tab Height (After Layout): {startupTab.Height}");
+
+        // Optionally, log the TabControl height after layout if needed
+        TabControl tabControl = startupTab.Parent as TabControl;
+        if (tabControl != null)
         {
-            CPHLogger.LogInfo($"[ProcessControl] Control Details: {control.ToString()}");
-            // Calculate right and bottom edges for the control
-            int controlRight = control.Right + control.Margin.Right;
-            int controlBottom = control.Bottom + control.Margin.Bottom;
-            CPHLogger.LogInfo($"[ProcessControl] Control Details. Right Control: {control.Right} Right Margin: {control.Margin.Right} Right Total: {controlRight}");
-            CPHLogger.LogInfo($"[ProcessControl] Control Details. Bottom Control: {control.Bottom} Bottom Margin: {control.Margin.Bottom} Bottom Total: {controlBottom}");
+            CPHLogger.LogInfo($"[AddStartupTabControls] TabControl Height (After Layout): {tabControl.Height}");
+        }        
 
-            // Update the maximum dimensions
-            maxWidth = Math.Max(maxWidth, controlRight);
-            maxHeight = Math.Max(maxHeight, controlBottom);
-            CPHLogger.LogInfo($"[ProcessControl] Max Dimensions. Width: {maxWidth} Height: {maxHeight}.");
 
-            // Recursively process nested controls
-            foreach (Control child in control.Controls)
-            {
-                CPHLogger.LogInfo($"[ProcessControl] Nested Child Processing. {child.ToString()}.");                                
-                ProcessControl(child);
-            }            
-        }
-
-        // Process each child control recursively
-        foreach (Control child in content.Controls)
-        {
-            CPHLogger.LogInfo($"[ProcessControl] Unnested Child Processing. {child.ToString()}.");                                
-            ProcessControl(child);
-        }
-
-        // Apply the buffer to the calculated size
-        maxWidth += buffer;
-        maxHeight += buffer;
-
-		CPHLogger.LogInfo($"Max Height: {maxWidth}.");
-        CPHLogger.LogInfo($"Max Height: {maxHeight}.");
-
-        // Apply the calculated size
-        CPHLogger.LogDebug($"Update content sizes: {maxHeight}.");
-        content.MinimumSize = new Size(maxWidth, maxHeight);
-        container.MinimumSize = new Size(maxWidth, maxHeight);
-        container.AutoScrollMinSize = new Size(maxWidth, maxHeight);       
 
     }
 
@@ -515,10 +486,6 @@ public class LoadStartupConfigForm : Form
         buttonPanel.Anchor = AnchorStyles.None;
         buttonPanel.WrapContents = false;
         //buttonPanel.HorizontalAlign = ContentAlignment.MiddleCenter;
-
-        // Add the "Save" and "Cancel" buttons to the FlowLayoutPanel with padding for spacing
-        btnSaveForm.Margin = new Padding(10);
-        btnCloseForm.Margin = new Padding(10);
 
         // Add buttons to the FlowLayoutPanel
         buttonPanel.Controls.Add(btnSaveForm);
@@ -741,9 +708,14 @@ public class LoadStartupConfigForm : Form
         radioStartupConfigNo.Font = new Font("Segoe UI", 9);
         radioStartupConfigPrompt.Font = new Font("Segoe UI", 9);
 
+		
+		UIStyling.StyleLabel(lblStartupConfigDelay, "Delay (In Seconds)");
+
         // Styled delay controls
         lblStartupConfigDelay.ForeColor = Color.DimGray;
         numupdwnStartupConfigDelay.BackColor = Color.White;
+        UIStyling.StyleNumberUpDown(numupdwnStartupConfigDelay); 
+
 
         // Add controls to the layout panel
         startupOptionsPanel.Controls.Add(radioStartupConfigYes, 0, 0);
@@ -1488,6 +1460,16 @@ public static class UserSettingsControl
 
 public static class UIStyling
 {
+    public static void StyleNumberUpDown(NumericUpDown numericUpDown)
+    {
+        numericUpDown.Width = 40;
+        numericUpDown.Minimum = 0;
+        numericUpDown.Maximum = 30;
+        numericUpDown.Value = 2;
+        numericUpDown.Anchor = AnchorStyles.Left;
+        numericUpDown.Margin = new Padding(2, 0, 0, 0);
+    }
+
     public static void StyleRadioButton(RadioButton radioButton, string prompt)
     {
         radioButton.Text = prompt;
@@ -1496,45 +1478,69 @@ public static class UIStyling
         radioButton.TextAlign = ContentAlignment.MiddleLeft;
     }
 
+    public static void StyleLabel(Label label, string labelText)
+    {
+        label.Text = labelText;
+        label.AutoSize = true;
+        label.Dock = DockStyle.Fill;
+        label.TextAlign = ContentAlignment.MiddleLeft;           
+    }    
+
+
     // Style for primary/main buttons
-    public static void StyleMainButton(Button button)
+    public static void StyleBtn(Button btn, string btnText, int btnType = 1, bool btnEnabled = true, 
+                        Padding? btnMargin = null, Padding? btnPadding = null)
     {
-        button.Font = new Font("Microsoft Sans Serif", 8.5f);
-        button.Width = 90;
-        button.Height = 24;
-        button.Margin = new Padding(0, 0, 0, 0);
-        button.Padding = new Padding(3, 3, 3, 3);
-        button.BackColor = Color.White; // Distinct button color
-        button.ForeColor = SystemColors.ControlText; // Text color for contrast
-        button.FlatAppearance.BorderSize = 1; // Add a subtle border
-        button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
+        // Set button properties
+        btn.Text = btnText;         
+        btn.Height = 24;
+        btn.Enabled = btnEnabled; 
 
-        AttachHoverEffects(button);
+        // Set common button styles
+        btn.Font = new Font("Microsoft Sans Serif", 8.5f);
+        btn.BackColor = Color.White;
+        btn.ForeColor = SystemColors.ControlText;
+        btn.FlatAppearance.BorderSize = 1;
+        btn.FlatAppearance.BorderColor = Color.DarkGray;
+
+        // Switch on button type to customize further
+        switch (btnType)
+        {
+            case 1:
+                btn.Width = 90;
+                // Specific margin for button type 1 (if not already provided)
+                btn.Margin = btnMargin ?? new Padding(0, 0, 0, 0);
+                btn.Margin = btnPadding ?? new Padding(2, 2, 2, 2);
+                break;
+
+            case 2:
+                btn.Width = 120;
+                // Specific margin for button type 2 (if not already provided)
+                btn.Margin = btnMargin ?? new Padding(1, 3, 1, 1);
+                btn.Margin = btnPadding ?? new Padding(2, 2, 2, 2);
+                break;
+
+            default:
+                btn.Width = 90;
+                // Default margin for unspecified types (if not already provided)
+                btn.Margin = btnMargin ?? new Padding(0, 0, 0, 0);
+                btn.Margin = btnPadding ?? new Padding(2, 2, 2, 2);
+                break;
+        }
+
+        // Attach hover effects (assuming this is a method you have)
+        AttachHoverEffects(btn);
     }
 
-    // Style for secondary buttons (less prominent)
-    public static void StyleLongerButton(Button button)
-    {
-        button.Font = new Font("Microsoft Sans Serif", 8.5f);
-        button.Width = 120;
-        button.Height = 24;
-        button.Margin = new Padding(1, 3, 1, 1);
-        button.Padding = new Padding(2, 2, 2, 2);
-        button.BackColor = Color.White; // Distinct button color
-        button.ForeColor = SystemColors.ControlText; // Text color for contrast
-        button.FlatAppearance.BorderSize = 1; // Add a subtle border
-        button.FlatAppearance.BorderColor = Color.DarkGray; // Border color
-
-        AttachHoverEffects(button);
-    }
 
     // Style for arrow buttons (up/down buttons)
-    public static void StyleArrowButton(Button button)
+    public static void StyleArrowBtn(Button btn, string btnArrow)
     {
-        button.Width = 20;
-        button.Height = 20;
-        button.Margin = new Padding(1, 0, 1, 0);
-        button.Padding = new Padding(0, 0, 0, 0);
+        btn.Text = btnArrow;
+        btn.Width = 20;
+        btn.Height = 20;
+        btn.Margin = new Padding(1, 0, 1, 0);
+        btn.Padding = new Padding(0, 0, 0, 0);
     }
 
     // Style for list boxes
@@ -1574,6 +1580,8 @@ public static class UIStyling
         flowBox.BorderStyle = BorderStyle.FixedSingle; // Add a subtle border for visual clarity
     }
 
+
+
     private static void AttachHoverEffects(Button button)
     {
         // Change to light blue on hover
@@ -1588,6 +1596,9 @@ public static class UIStyling
             button.BackColor = Color.White;
         };
     }
+
+
+
 
     public static void StyleTableLayoutPanel(
         TableLayoutPanel tableLayoutPanel,
@@ -1651,7 +1662,7 @@ public static class UIStyling
     {
         tabControl.Dock = DockStyle.Fill;
         tabControl.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-        tabControl.Padding = new Point(5, 5);
+        tabControl.Padding = new Point(0, 0);
         tabControl.Appearance = TabAppearance.FlatButtons; // Set tabs to flat style
         tabControl.ItemSize = new Size(120, 20); // Custom size for each tab
         tabControl.DrawMode = TabDrawMode.OwnerDrawFixed; // Enable custom drawing
@@ -1672,122 +1683,138 @@ public static class UIStyling
     }
 }
 
-
 public static class FormResizer
 {
+    private static int totalControls = 0;
+    private static int visibleControlsCount = 0;
+    private static int invisibleControlsCount = 0;
+    private static int maxNestingDepth = 0;
+
     public static void ResizeFormToFitContent(Form form)
     {
-        // Log the initial form size
-        CPHLogger.LogInfo($"[ResizeFormToFitContent] Initial Form Size: Width={form.Width}, Height={form.Height}.");
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Initial Form Size: Width={form.Width}, Height={form.Height}");
+        LogEnvironmentInfo();
 
-        // Calculate the required height and width by including all nested controls
+        // Log the form's AutoSizeMode
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Form AutoSizeMode: {form.AutoSizeMode}");
+
         int requiredHeight = CalculateDynamicHeight(form.Controls, out int requiredWidth);
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Calculated Required Dimensions: Height={requiredHeight}, Width={requiredWidth}");
 
-        CPHLogger.LogInfo($"[ResizeFormToFitContent] Calculated Required Dimensions: Height={requiredHeight}, Width={requiredWidth}.");
-
-        // Adjust form size based on calculated dimensions
+        // Adjust size based on requirements
         if (requiredHeight > form.Height || requiredWidth > form.Width)
         {
-            form.Height = Math.Min(requiredHeight + 50, Screen.PrimaryScreen.WorkingArea.Height); // Add a buffer of 50
+            form.Height = Math.Min(requiredHeight + 50, Screen.PrimaryScreen.WorkingArea.Height);
             form.Width = Math.Min(requiredWidth + 50, Screen.PrimaryScreen.WorkingArea.Width);
-            CPHLogger.LogInfo($"[ResizeFormToFitContent] Resized Form Size: Width={form.Width}, Height={form.Height}.");
+            CPHLogger.LogInfo($"[ResizeFormToFitContent] Resized Form Size: Width={form.Width}, Height={form.Height}");
         }
         else
         {
             CPHLogger.LogInfo("[ResizeFormToFitContent] Current size is sufficient. No adjustment needed.");
         }
 
-        // Log the final form size
-        CPHLogger.LogInfo($"[ResizeFormToFitContent] Final Form Size: Width={form.Width}, Height={form.Height}.");
+        // Log final dimensions
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Final Form Size: Width={form.Width}, Height={form.Height}");
+        LogSummary();
     }
 
-    public static int CalculateDynamicHeight(Control.ControlCollection controls, out int totalWidth, int buffer = 10)
+    public static int CalculateDynamicHeight(Control.ControlCollection controls, out int totalWidth, int buffer = 10, int nestingLevel = 0)
     {
-        int totalHeight = 0; // Tracks the total height needed for all controls
-        int maxWidth = 0;    // Tracks the maximum width required by the controls
+        int totalHeight = 0;
+        int maxWidth = 0;
 
-        // Local function to process each container's child controls
-        void ProcessContainer(Control container)
-        {
-            int rowMaxHeight = 0; // Tracks the tallest control in the current row
-            int currentRowY = -1; // Tracks the Y coordinate of the current row (to detect new rows)
+        string indent = new string(' ', nestingLevel * 4);
+        CPHLogger.LogInfo($"{indent}[CalculateDynamicHeight] Processing controls at Nesting Level {nestingLevel}");
 
-            foreach (Control control in container.Controls)
-            {
-                // Log control processing
-                CPHLogger.LogDebug($"[CalculateDynamicHeight] Processing Control: Name={control.Name}, Type={control.GetType().Name}");
-
-                // Get the control's height and width, including margins
-                int controlHeight = control.PreferredSize.Height + control.Margin.Vertical;
-                int controlWidth = control.PreferredSize.Width + control.Margin.Horizontal;
-
-                // Log the individual control's dimensions
-                CPHLogger.LogInfo($"[CalculateDynamicHeight] Control Details: Name={control.Name}, Height={controlHeight}, Width={controlWidth}, Top={control.Top}, Left={control.Left}");
-
-                // Overlap detection with other controls in the container
-                foreach (Control child in container.Controls)
-                {
-                    if (control != child && control.Bounds.IntersectsWith(child.Bounds))
-                    {
-                        CPHLogger.LogWarn($"[Overlap Detected] Control '{control.Name}' overlaps with '{child.Name}'.");
-                    }
-                }
-
-                // If this control is part of a new row, add the previous row's max height to totalHeight
-                if (currentRowY != -1 && control.Top > currentRowY)
-                {
-                    totalHeight += rowMaxHeight;
-                    CPHLogger.LogInfo($"[CalculateDynamicHeight] Adding Row Max Height: {rowMaxHeight}, Total Height So Far: {totalHeight}");
-                    rowMaxHeight = 0; // Reset for the new row
-                }
-
-                // Update row tracker and max height
-                currentRowY = control.Top;
-                rowMaxHeight = Math.Max(rowMaxHeight, controlHeight);
-
-                // Update the maximum width
-                maxWidth = Math.Max(maxWidth, control.Right);
-            }
-
-            // Add the last row's max height
-            totalHeight += rowMaxHeight;
-            CPHLogger.LogInfo($"[CalculateDynamicHeight] Final Row Max Height: {rowMaxHeight}, Total Height After Rows: {totalHeight}");
-        }
-
-        // Process each control recursively
         foreach (Control control in controls)
         {
-            if (control is ContainerControl container)
+            totalControls++;
+
+            // Count visible and invisible controls
+            if (control.Visible)
             {
-                CPHLogger.LogDebug($"[CalculateDynamicHeight] Found Container Control: {control.Name}");
-                ProcessContainer(container);
+                visibleControlsCount++;
             }
             else
             {
-                // For standalone controls
-                int controlHeight = control.PreferredSize.Height + control.Margin.Vertical;
-                int controlWidth = control.PreferredSize.Width + control.Margin.Horizontal;
+                invisibleControlsCount++;
+            }
 
-                // Log standalone control dimensions
-                CPHLogger.LogInfo($"[CalculateDynamicHeight] Standalone Control Details: Name={control.Name}, Height={controlHeight}, Width={controlWidth}");
+            CPHLogger.LogInfo($"{indent}[Control] Name={control.Name ?? "Unnamed"}, Type={control.GetType().Name}, Text={control.Text ?? "N/A"}");
+            CPHLogger.LogInfo($"{indent}    Location: X={control.Left}, Y={control.Top}, Size: Width={control.Width}, Height={control.Height}");
+            CPHLogger.LogInfo($"{indent}    Margins: {control.Margin}, Padding: {control.Padding}");
+            CPHLogger.LogInfo($"{indent}    Visibility: Visible={control.Visible}, Enabled={control.Enabled}, TabStop={control.TabStop}");
+            CPHLogger.LogInfo($"{indent}    Anchor: {control.Anchor}, Dock: {control.Dock}");
+            CPHLogger.LogInfo($"{indent}    AutoSize: {control.AutoSize}");
 
-                totalHeight += controlHeight;
-                maxWidth = Math.Max(maxWidth, controlWidth);
+            // AutoSizeMode logging
+            if (control is Form formControl)
+            {
+                CPHLogger.LogInfo($"{indent}    AutoSizeMode (Form): {formControl.AutoSizeMode}");
+            }
+            else if (control is TableLayoutPanel)
+            {
+                CPHLogger.LogInfo($"{indent}    AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported");
+            }
+            else
+            {
+                CPHLogger.LogInfo($"{indent}    AutoSizeMode: Not Applicable");
+            }
+
+            // Check for overlapping controls
+            foreach (Control otherControl in controls)
+            {
+                if (control != otherControl && control.Bounds.IntersectsWith(otherControl.Bounds))
+                {
+                    CPHLogger.LogInfo($"{indent}    Overlap Detected: {control.Name} overlaps with {otherControl.Name}");
+                }
+            }
+
+            // Preferred size vs calculated size
+            int controlHeight = control.PreferredSize.Height + control.Margin.Vertical;
+            int controlWidth = control.PreferredSize.Width + control.Margin.Horizontal;
+            CPHLogger.LogInfo($"{indent}    Preferred Size: Height={control.PreferredSize.Height}, Width={control.PreferredSize.Width}");
+            CPHLogger.LogInfo($"{indent}    Calculated Size (with Margins): Height={controlHeight}, Width={controlWidth}");
+
+            // Update totals
+            totalHeight += controlHeight;
+            maxWidth = Math.Max(maxWidth, control.Right);
+
+            // Recursive call for children
+            if (control.HasChildren)
+            {
+                CPHLogger.LogInfo($"{indent}    Processing child controls of {control.Name}...");
+                int childTotalWidth;
+                totalHeight += CalculateDynamicHeight(control.Controls, out childTotalWidth, buffer, nestingLevel + 1);
+                maxWidth = Math.Max(maxWidth, childTotalWidth);
             }
         }
 
-        // Add a buffer for better spacing
         totalHeight += buffer;
         maxWidth += buffer;
+        maxNestingDepth = Math.Max(maxNestingDepth, nestingLevel);
 
-        // Log final calculated dimensions
-        CPHLogger.LogInfo($"[CalculateDynamicHeight] Total Calculated Dimensions: Height={totalHeight}, Width={maxWidth}");
-
+        CPHLogger.LogInfo($"{indent}[CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level {nestingLevel}: Height={totalHeight}, Width={maxWidth}");
         totalWidth = maxWidth;
         return totalHeight;
     }
-}
 
+    private static void LogEnvironmentInfo()
+    {
+        CPHLogger.LogInfo($"[Environment] Screen Resolution: {Screen.PrimaryScreen.Bounds.Width}x{Screen.PrimaryScreen.Bounds.Height}");
+        CPHLogger.LogInfo($"[Environment] Working Area: {Screen.PrimaryScreen.WorkingArea.Width}x{Screen.PrimaryScreen.WorkingArea.Height}");
+        CPHLogger.LogInfo($"[Environment] DPI Scaling: {Graphics.FromHwnd(IntPtr.Zero).DpiX} DPI");
+        CPHLogger.LogInfo($"[Environment] OS Version: {Environment.OSVersion}");
+        CPHLogger.LogInfo($"[Environment] .NET Runtime Version: {Environment.Version}");
+    }
+
+    private static void LogSummary()
+    {
+        CPHLogger.LogInfo($"[Summary] Total Controls Processed: {totalControls}");
+        CPHLogger.LogInfo($"[Summary] Visible Controls: {visibleControlsCount}, Invisible Controls: {invisibleControlsCount}");
+        CPHLogger.LogInfo($"[Summary] Maximum Nesting Depth Reached: {maxNestingDepth}");
+    }
+}
 
 
 

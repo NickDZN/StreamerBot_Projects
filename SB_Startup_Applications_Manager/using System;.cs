@@ -1,3 +1,5 @@
+Sourcecode: 
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,6 +10,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
+using System.ComponentModel;
+using System.Reflection;     
 
 public class CPHInline
 {
@@ -25,48 +29,74 @@ public class CPHInline
 
     public bool Execute()
     {
-
-        CPH.LogDebug("Starting SBSAM");
+        // Start Execution and create centralised SB instance. 
+        CPH.LogDebug("SBSAM Loaded.");
+		SB.CPH = CPH;
+		SB.args = args;		
+		CPHLogger.LogDebug("Centralised CPH, enabling centralised methods.");
 
         // Attempt to get the handle of the currently active window
+        CPHLogger.LogDebug("Getting Window Details");
         IntPtr activeWindowHandle = GetForegroundWindow();
+        CPHLogger.LogInfo($"activeWindowHandle is {activeWindowHandle}.");
 
         // Check if the window was found
         if (activeWindowHandle == IntPtr.Zero)
         {
-            MessageBox.Show("No active window found.");
+            CPHLogger.LogError("No active window found.");
             return false;
         }
 
         // Get the window title
         StringBuilder windowTitle = new StringBuilder(256);
+        CPHLogger.LogInfo($"windowTitle is {windowTitle}.");
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
 
         // Get the dimensions of the active window
         if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
         {
-            MessageBox.Show("Failed to get window dimensions.");
+            CPHLogger.LogError("Failed to get window dimensions.");
             return false;
         }
 
         // Start new thread for the form.
+        CPHLogger.LogDebug("Starting main form thread.");
         Thread staThread = new Thread(() =>
         {
-            Application.EnableVisualStyles();
-
-            // Get the global action list
-            List<ActionData> actionList = CPH.GetActions();
-
-            if (mainFormInstance == null || mainFormInstance.IsDisposed)
+            try
             {
-                mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
-                Application.Run(mainFormInstance);
+                CPHLogger.LogDebug("Enabling application visual styles.");
+                Application.EnableVisualStyles();
+
+                CPHLogger.LogDebug("Populating list of actions.");
+                List<ActionData> actionList = CPH.GetActions();
+
+                if (mainFormInstance == null || mainFormInstance.IsDisposed)
+                {
+                    CPHLogger.LogDebug("Loading a new form.");
+                    mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
+
+                    // Add a catch-all handler for unhandled exceptions in the form
+                    Application.ThreadException += (sender, args) =>
+                    {
+                        CPHLogger.LogError($"Unhandled exception in STA thread: {args.Exception.Message}\n{args.Exception.StackTrace}");
+                    };
+
+                    Application.Run(mainFormInstance);
+                }
+                else
+                {
+                    CPHLogger.LogDebug("Bringing current form to front.");
+                    mainFormInstance.BringToFront();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                mainFormInstance.BringToFront();
+                CPHLogger.LogError($"Unhandled exception in STA thread: {ex.Message}\n{ex.StackTrace}");
             }
         });
+
+
 
         staThread.SetApartmentState(ApartmentState.STA);
         staThread.Start();
@@ -74,8 +104,10 @@ public class CPHInline
     }
 }
 
+
 public class LoadStartupConfigForm : Form
 {
+	private IInlineInvokeProxy CPH; // Field to hold the CPH object
     private List<ActionData> actionDataList;
 
     //SB_SAM Startup Configuration Buttons.
@@ -148,17 +180,23 @@ public class LoadStartupConfigForm : Form
         actionDataList = actions;
 
         // Build the core form layout
+        CPHLogger.LogDebug("Building base form structure.");
         var tabControl = BuildCoreForm(activeWindowRect);
 
         // Add tabs with specific configurations
+        CPHLogger.LogDebug("Calling AddTabWithControls for the Streamer Bot Started tab");
         AddTabWithControls(tabControl, "Startup", AddStartupTabControls);
+        CPHLogger.LogDebug("Calling AddTabWithControls for the Stream Ending tab");
         //AddTabWithControls(tabControl, "Stream Ending", AddStreamEndingTabControls);
+        CPHLogger.LogDebug("Calling AddTabWithControls for the Support Me tab");
         //AddTabWithControls(tabControl, "Support", AddSupportTabControls);
 
         // Initialize controls with styles
-        InitializeControls();
+        CPHLogger.LogDebug("Calling InitialiseControls.");
+        InitialiseControls();
 
         // Add TabControl to the form
+        CPHLogger.LogDebug("Adding TabControl to the base form.");
         this.Controls.Add(tabControl);
     }
 
@@ -169,23 +207,36 @@ public class LoadStartupConfigForm : Form
         Action<TabPage> addControls
     )
     {
+        CPHLogger.LogDebug($"Creating tab page: {title}");
         var tabPage = CreateTabPage(title);
-        addControls(tabPage); // Add specific controls to the tab
+        CPHLogger.LogDebug($"Adding tab controls: {title}");
+        addControls(tabPage); 
+        CPHLogger.LogDebug($"Adding tab page to form: {title}");
         tabControl.TabPages.Add(tabPage);
     }
 
-    private void InitializeControls()
+    private void InitialiseControls()
     {
         // Apply consistent styling for other controls
+        CPHLogger.LogDebug("Calling: StyleFormUserActionControls");
         StyleFormUserActionControls();
+
+        CPHLogger.LogDebug("Calling: StyleApplicationListControls");
         StyleApplicationListControls();
+
+        CPHLogger.LogDebug("Calling: StyleActionListsControls");
         StyleActionListsControls();
+
+        CPHLogger.LogDebug("Calling: StyleStartupConfigControls");
         StyleStartupConfigControls();
+
+        CPHLogger.LogDebug("Calling: StyleFormFlowControls");
         StyleFormFlowControls();
     }
 
     private void StyleStartupConfigControls()
     {
+        CPHLogger.LogDebug("Styling Start Up Config Controls.");
         UIStyling.StyleRadioButton(radioStartupConfigYes, "Yes");
         UIStyling.StyleRadioButton(radioStartupConfigNo, "No");
         UIStyling.StyleRadioButton(radioStartupConfigPrompt, "Prompt");
@@ -194,6 +245,7 @@ public class LoadStartupConfigForm : Form
     // Generic method to apply styling to application-related controls
     private void StyleApplicationListControls()
     {
+        CPHLogger.LogDebug("Styling Application List Controls.");
         UIStyling.StyleListBox(lstApplications);
         UIStyling.StyleLongerButton(btnAddApplication);
         UIStyling.StyleLongerButton(btnAddApplicationPath);
@@ -205,6 +257,7 @@ public class LoadStartupConfigForm : Form
     // Generic method to apply styling to action-related controls
     private void StyleActionListsControls()
     {
+        CPHLogger.LogDebug("Styling Action List Controls.");
         UIStyling.StyleListBox(lstActionsPermitted);
         UIStyling.StyleLongerButton(btnAddActionPermitted);
         UIStyling.StyleLongerButton(btnRemoveActionPermitted);
@@ -217,6 +270,7 @@ public class LoadStartupConfigForm : Form
     private void StyleFormUserActionControls()
     {
         // Top Controls.
+        CPHLogger.LogDebug("Styling Form Interaction Controls.");
         UIStyling.StyleMainButton(btnResetAllSettings);
         UIStyling.StyleMainButton(btnImportSettings);
         UIStyling.StyleMainButton(btnExportSettings);
@@ -226,6 +280,7 @@ public class LoadStartupConfigForm : Form
 
     private void StyleFormFlowControls()
     {
+        CPHLogger.LogDebug("Styling Form Flow Controls.");
         UIStyling.StyleMainButton(btnCloseForm);
         UIStyling.StyleMainButton(btnSaveForm);
     }
@@ -234,40 +289,50 @@ public class LoadStartupConfigForm : Form
     private TabControl BuildCoreForm(Rectangle activeWindowRect)
     {
         // Configure form properties
+        CPHLogger.LogDebug("[BuildCoreForm][S] Setting Form Name");
         this.Text = Constants.FormName;
-        // this.Width = 600;
-        // this.Height = 800;
+        CPHLogger.LogInfo($"Form Name: {this.Text}");
+
+        CPHLogger.LogDebug("[BuildCoreForm] Setting Form base Size");
+        this.Width = 600;
+        this.Height = 800;
+        CPHLogger.LogInfo($"Form Size. W:{this.Width} H:{this.Height}");
+
+        CPHLogger.LogDebug("[BuildCoreForm] Setting Auto Size Properties");
+        this.AutoSize = true;
+        this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+
+        CPHLogger.LogDebug("[BuildCoreForm] Setting a minimum size.");
+        this.MinimumSize = new Size(600, 600);
+        CPHLogger.LogInfo($"Form Size. W:{this.Width} H:{this.Height}");
+        
+        CPHLogger.LogDebug("[BuildCoreForm] Setting base form styling.");
         this.BackColor = Color.WhiteSmoke;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
-        this.AutoSize = true;
-        this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-
-        // Set minimum size to prevent the form from being too small
-        this.MinimumSize = new Size(600, 600);
-
+        CPHLogger.LogDebug("[BuildCoreForm] Calling CenterForm.");
         CenterForm(activeWindowRect);
 
         // Create the TabControl with styling
-        var tabControl = new TabControl
-        {
-            Dock = DockStyle.Fill,
-            Font = new Font("Segoe UI", 10, FontStyle.Regular),
-            Padding = new Point(5, 5),
-        };
-
-        // Apply custom styling using the UIStyling helper
+        CPHLogger.LogDebug("[BuildCoreForm] Creating new TabControl.");
+        var tabControl = new TabControl();
+        CPHLogger.LogDebug("[BuildCoreForm] Calling UIStyling.StyleTabControl.");
         UIStyling.StyleTabControl(tabControl);
 
+        CPHLogger.LogDebug("[BuildCoreForm] Return TabControl");
         return tabControl;
     }
 
     private void CenterForm(Rectangle activeWindowRect)
     {
         // Center the form on the screen
+        CPHLogger.LogInfo($"[CenterForm][S] Getting center coordinates. {activeWindowRect.ToString()}");
         int centerX = activeWindowRect.Left + (activeWindowRect.Width - this.Width) / 2;
         int centerY = activeWindowRect.Top + (activeWindowRect.Height - this.Height) / 2;
+        CPHLogger.LogInfo($"[CenterForm] Coordinates: X:{centerX} / Y:{centerY}");
+
+        CPHLogger.LogDebug("[BuildCoreForm] Placing form location, and ordering");
         this.Location = new Point(centerX, centerY);
         this.TopMost = true;
     }
@@ -275,35 +340,33 @@ public class LoadStartupConfigForm : Form
     // Helper method to create a new tab page with common padding
     private TabPage CreateTabPage(string title)
     {
+        CPHLogger.LogInfo($"[CreateTabPage][S] Creating new Tab Page for: {title}");
         return new TabPage(title) { Padding = new Padding(10) };
     }
 
     // General method to create a layout panel for any tab
     private TableLayoutPanel CreateLayoutPanel(int columnCount = 1, int rowCount = 6)
     {
+        CPHLogger.LogInfo($"[TableLayoutPanel][S] Starting Base Tab Table Creation. Cols: {columnCount} Rows: {rowCount}");
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            Padding = new Padding(3, 3, 3, 3),
+            Padding = new Padding(2, 2, 2, 2),
             Margin = new Padding(2, 2, 2, 2),
             ColumnCount = columnCount,
             RowCount = rowCount,
             CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
         };
 
+        CPHLogger.LogDebug("[TableLayoutPanel] Returning Table Panel");
         return panel;
     }
 
     // Adding specific controls to the "Startup" tab
     private void AddStartupTabControls(TabPage startupTab)
     {
-
-
-        CPHInline instance = new CPHInline();
-        instance.CPH.LogDebug("string logLine");
-
-
+        CPHLogger.LogDebug("[AddStartupTabControls][S] Starting AddStartupTabControls");
         var scrollablePanel = new Panel
         {
             Dock = DockStyle.Fill,
@@ -311,78 +374,69 @@ public class LoadStartupConfigForm : Form
             BackColor = Color.WhiteSmoke,
         };
 
+        CPHLogger.LogDebug("[AddStartupTabControls] Calling Create Layout Panel.");
         var mainLayoutPanel = CreateLayoutPanel();
 
         // Add controls to the layout panel
+        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddConfigurationControls.");
         AddConfigurationControls(mainLayoutPanel);
+        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddApplicationControls.");
         AddApplicationControls(mainLayoutPanel);
+        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddSeparateActionGroups.");
         AddSeparateActionGroups(mainLayoutPanel);
+        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddStartupConfigurationControls.");
         AddStartupConfigurationControls(mainLayoutPanel);
+        CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddApplicationControlButtons.");
         AddApplicationControlButtons(mainLayoutPanel);
 
         // Add the layout panel to the scrollable panel
+        CPHLogger.LogDebug("[AddStartupTabControls] Adding Layout Panel to the Scrollable Panel.");
         scrollablePanel.Controls.Add(mainLayoutPanel);
 
         // Dynamically calculate the minimum size for the scrollable panel
+        CPHLogger.LogDebug("[AddStartupTabControls] SetMinimumSizeBasedOnChildControls.");
         SetMinimumSizeBasedOnChildControls(mainLayoutPanel, scrollablePanel);
 
         // Add the scrollable panel to the tab
+        CPHLogger.LogInfo($"[AddStartupTabControls] Adding the scrollable panel to the tab page. Size: {scrollablePanel.Size}");
         startupTab.Controls.Add(scrollablePanel);
     }
 
-    /// <summary>
-    /// Dynamically calculates and sets the MinimumSize of a container based on its child controls.
-    /// Ensures all controls are visible, and scrollbars are used when content exceeds the panel's size.
-    /// </summary>
-    /// <param name="content">The layout panel containing all controls.</param>
-    /// <param name="container">The scrollable container (must be a Panel).</param>
-    /// <summary>
-    /// Dynamically calculates and sets the MinimumSize of a container based on its child controls.
-    /// Ensures all controls are visible, including nested ones, and scrollbars are used when content exceeds the panel's size.
-    /// </summary>
-    /// <param name="content">The layout panel containing all controls.</param>
-    /// <param name="container">The scrollable container (must be a Panel).</param>
-    /// <param name="buffer">Optional buffer (in pixels) to add around the calculated size. Default is 10 pixels.</param>
     private void SetMinimumSizeBasedOnChildControls(Control content, Panel container, int buffer = 10 )
     {
-        // Log entry into the method
-        CPHInline instance = new CPHInline();
-        instance.CPH.LogDebug("Entering SetMinimumSizeBasedOnChildControls");
-
-        if (content == null || container == null)
-        {
-            instance.CPH.LogDebug("No content / container");
-            return;
-        }
-
+        CPHLogger.LogDebug("[SetMinimumSizeBasedOnChildControls][S] Starting SetMinimumSizeBasedOnChildControls");
         // Tracks the maximum width and height
         int maxWidth = 0;
         int maxHeight = 0;
 
+        CPHLogger.LogDebug("[SetMinimumSizeBasedOnChildControls] Processing Controls.");
         // Method to recursively process all controls
         void ProcessControl(Control control)
         {
-            // Log control name and its dimensions
-            instance.CPH.LogDebug($"Processing control: {control.Name ?? "Unnamed Control"}, Location: {control.Location}");
-
+            CPHLogger.LogInfo($"[ProcessControl] Control Details: {control.ToString()}");
             // Calculate right and bottom edges for the control
             int controlRight = control.Right + control.Margin.Right;
             int controlBottom = control.Bottom + control.Margin.Bottom;
+            CPHLogger.LogInfo($"[ProcessControl] Control Details. Right Control: {control.Right} Right Margin: {control.Margin.Right} Right Total: {controlRight}");
+            CPHLogger.LogInfo($"[ProcessControl] Control Details. Bottom Control: {control.Bottom} Bottom Margin: {control.Margin.Bottom} Bottom Total: {controlBottom}");
 
             // Update the maximum dimensions
             maxWidth = Math.Max(maxWidth, controlRight);
             maxHeight = Math.Max(maxHeight, controlBottom);
+            CPHLogger.LogInfo($"[ProcessControl] Max Dimensions. Width: {maxWidth} Height: {maxHeight}.");
 
             // Recursively process nested controls
             foreach (Control child in control.Controls)
             {
+                CPHLogger.LogInfo($"[ProcessControl] Nested Child Processing. {child.ToString()}.");                                
                 ProcessControl(child);
-            }
+            }            
         }
 
         // Process each child control recursively
         foreach (Control child in content.Controls)
         {
+            CPHLogger.LogInfo($"[ProcessControl] Unnested Child Processing. {child.ToString()}.");                                
             ProcessControl(child);
         }
 
@@ -390,18 +444,16 @@ public class LoadStartupConfigForm : Form
         maxWidth += buffer;
         maxHeight += buffer;
 
+		CPHLogger.LogInfo($"Max Height: {maxWidth}.");
+        CPHLogger.LogInfo($"Max Height: {maxHeight}.");
 
         // Apply the calculated size
+        CPHLogger.LogDebug($"Update content sizes: {maxHeight}.");
         content.MinimumSize = new Size(maxWidth, maxHeight);
         container.MinimumSize = new Size(maxWidth, maxHeight);
-        container.AutoScrollMinSize = new Size(maxWidth, maxHeight);
+        container.AutoScrollMinSize = new Size(maxWidth, maxHeight);       
 
-        
     }
-
-    // Add controls for other tabs (Stream Ending and Support) similarly...
-
-
 
 
     /* STARTUP TAB
@@ -1616,6 +1668,9 @@ public static class UIStyling
 
     public static void StyleTabControl(TabControl tabControl)
     {
+        tabControl.Dock = DockStyle.Fill;
+        tabControl.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+        tabControl.Padding = new Point(5, 5);
         tabControl.Appearance = TabAppearance.FlatButtons; // Set tabs to flat style
         tabControl.ItemSize = new Size(120, 20); // Custom size for each tab
         tabControl.DrawMode = TabDrawMode.OwnerDrawFixed; // Enable custom drawing
@@ -1636,34 +1691,885 @@ public static class UIStyling
     }
 }
 
+
 public static class FormResizer
 {
+    private static int totalControls = 0;
+    private static int visibleControlsCount = 0;
+    private static int invisibleControlsCount = 0;
+    private static int maxNestingDepth = 0;
+
     public static void ResizeFormToFitContent(Form form)
     {
-        int requiredHeight = form
-            .Controls.OfType<Control>()
-            .Sum(control => control.PreferredSize.Height + control.Margin.Vertical);
-        if (requiredHeight > form.Height)
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Initial Form Size: Width={form.Width}, Height={form.Height}");
+        LogEnvironmentInfo();
+
+        // Log the form's AutoSizeMode
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Form AutoSizeMode: {form.AutoSizeMode}");
+
+        int requiredHeight = CalculateDynamicHeight(form.Controls, out int requiredWidth);
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Calculated Required Dimensions: Height={requiredHeight}, Width={requiredWidth}");
+
+        // Adjust size based on requirements
+        if (requiredHeight > form.Height || requiredWidth > form.Width)
         {
             form.Height = Math.Min(requiredHeight + 50, Screen.PrimaryScreen.WorkingArea.Height);
+            form.Width = Math.Min(requiredWidth + 50, Screen.PrimaryScreen.WorkingArea.Width);
+            CPHLogger.LogInfo($"[ResizeFormToFitContent] Resized Form Size: Width={form.Width}, Height={form.Height}");
+        }
+        else
+        {
+            CPHLogger.LogInfo("[ResizeFormToFitContent] Current size is sufficient. No adjustment needed.");
+        }
+
+        // Log final dimensions
+        CPHLogger.LogInfo($"[ResizeFormToFitContent] Final Form Size: Width={form.Width}, Height={form.Height}");
+        LogSummary();
+    }
+
+public static int CalculateDynamicHeight(Control.ControlCollection controls, out int totalWidth, int buffer = 10, int nestingLevel = 0)
+{
+    int totalHeight = 0;
+    int maxWidth = 0;
+
+    string indent = new string(' ', nestingLevel * 4);
+    CPHLogger.LogInfo($"{indent}[CalculateDynamicHeight] Processing controls at Nesting Level {nestingLevel}");
+
+    foreach (Control control in controls)
+    {
+        totalControls++;
+        CPHLogger.LogInfo($"{indent}[Control] Name={control.Name ?? "Unnamed"}, Type={control.GetType().Name}, Text={control.Text ?? "N/A"}");
+        CPHLogger.LogInfo($"{indent}    Location: X={control.Left}, Y={control.Top}, Size: Width={control.Width}, Height={control.Height}");
+        CPHLogger.LogInfo($"{indent}    Margins: {control.Margin}, Padding: {control.Padding}");
+        CPHLogger.LogInfo($"{indent}    Visibility: Visible={control.Visible}, Enabled={control.Enabled}, TabStop={control.TabStop}");
+        CPHLogger.LogInfo($"{indent}    Anchor: {control.Anchor}, Dock: {control.Dock}");
+        CPHLogger.LogInfo($"{indent}    AutoSize: {control.AutoSize}");
+
+        // AutoSizeMode logging
+        if (control is Form formControl)
+        {
+            CPHLogger.LogInfo($"{indent}    AutoSizeMode (Form): {formControl.AutoSizeMode}");
+        }
+        else if (control is TableLayoutPanel)
+        {
+            CPHLogger.LogInfo($"{indent}    AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported");
+        }
+        else
+        {
+            CPHLogger.LogInfo($"{indent}    AutoSizeMode: Not Applicable");
+        }
+
+        // Check for overlapping controls
+        foreach (Control otherControl in controls)
+        {
+            if (control != otherControl && control.Bounds.IntersectsWith(otherControl.Bounds))
+            {
+                CPHLogger.LogInfo($"{indent}    Overlap Detected: {control.Name} overlaps with {otherControl.Name}");
+            }
+        }
+
+        // Check for event handlers
+        var events = TypeDescriptor.GetEvents(control);
+        foreach (EventDescriptor eventDescriptor in events)
+        {
+            var handlers = control.GetType().GetField("Event" + eventDescriptor.Name,
+                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+            if (handlers?.GetValue(control) != null)
+            {
+                CPHLogger.LogInfo($"{indent}    Event: {eventDescriptor.Name} has attached handlers.");
+            }
+        }
+
+        // Preferred size vs calculated size
+        int controlHeight = control.PreferredSize.Height + control.Margin.Vertical;
+        int controlWidth = control.PreferredSize.Width + control.Margin.Horizontal;
+        CPHLogger.LogInfo($"{indent}    Preferred Size: Height={control.PreferredSize.Height}, Width={control.PreferredSize.Width}");
+        CPHLogger.LogInfo($"{indent}    Calculated Size (with Margins): Height={controlHeight}, Width={controlWidth}");
+
+        // Update totals
+        totalHeight += controlHeight;
+        maxWidth = Math.Max(maxWidth, control.Right);
+
+        // Recursive call for children
+        if (control.HasChildren)
+        {
+            CPHLogger.LogInfo($"{indent}    Processing child controls of {control.Name}...");
+            int childTotalWidth;
+            totalHeight += CalculateDynamicHeight(control.Controls, out childTotalWidth, buffer, nestingLevel + 1);
+            maxWidth = Math.Max(maxWidth, childTotalWidth);
         }
     }
+
+    totalHeight += buffer;
+    maxWidth += buffer;
+    maxNestingDepth = Math.Max(maxNestingDepth, nestingLevel);
+
+    CPHLogger.LogInfo($"{indent}[CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level {nestingLevel}: Height={totalHeight}, Width={maxWidth}");
+    totalWidth = maxWidth;
+    return totalHeight;
 }
 
-public static class Constants
-{
-    public const string ExecutableFilter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
-    public const string SettingsFileName = "settings.json";
-    public const string FormName = "SBZen Config Manager";
-    public static readonly string DataDir = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory,
-        "data"
-    );
+    
 
-    public enum StartupMode
+    private static void LogEnvironmentInfo()
     {
-        Yes,
-        No,
-        Prompt,
+        CPHLogger.LogInfo($"[Environment] Screen Resolution: {Screen.PrimaryScreen.Bounds.Width}x{Screen.PrimaryScreen.Bounds.Height}");
+        CPHLogger.LogInfo($"[Environment] Working Area: {Screen.PrimaryScreen.WorkingArea.Width}x{Screen.PrimaryScreen.WorkingArea.Height}");
+        CPHLogger.LogInfo($"[Environment] DPI Scaling: {Graphics.FromHwnd(IntPtr.Zero).DpiX} DPI");
+        CPHLogger.LogInfo($"[Environment] OS Version: {Environment.OSVersion}");
+        CPHLogger.LogInfo($"[Environment] .NET Runtime Version: {Environment.Version}");
+    }
+
+    private static void LogSummary()
+    {
+        CPHLogger.LogInfo($"[Summary] Total Controls Processed: {totalControls}");
+        CPHLogger.LogInfo($"[Summary] Visible Controls: {visibleControlsCount}, Invisible Controls: {invisibleControlsCount}");
+        CPHLogger.LogInfo($"[Summary] Maximum Nesting Depth Reached: {maxNestingDepth}");
     }
 }
+
+Log
+[2024-11-25 19:51:07.331 DBG] SBSAM Loaded.
+[2024-11-25 19:51:07.331 DBG] [DEBUG] Centralised CPH, enabling centralised methods.
+[2024-11-25 19:51:07.331 DBG] [DEBUG] Getting Window Details
+[2024-11-25 19:51:07.331 INF] [INFO] activeWindowHandle is 133622.
+[2024-11-25 19:51:07.331 INF] [INFO] windowTitle is .
+[2024-11-25 19:51:07.334 DBG] [DEBUG] Starting main form thread.
+[2024-11-25 19:51:07.335 DBG] [DEBUG] Enabling application visual styles.
+[2024-11-25 19:51:07.335 DBG] [DEBUG] Populating list of actions.
+[2024-11-25 19:51:07.338 DBG] [DEBUG] Loading a new form.
+[2024-11-25 19:51:07.339 DBG] [DEBUG] Building base form structure.
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm][S] Setting Form Name
+[2024-11-25 19:51:07.339 INF] [INFO] Form Name: SBZen Config Manager
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Setting Form base Size
+[2024-11-25 19:51:07.339 INF] [INFO] Form Size. W:600 H:800
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Setting Auto Size Properties
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Setting a minimum size.
+[2024-11-25 19:51:07.339 INF] [INFO] Form Size. W:600 H:600
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Setting base form styling.
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Calling CenterForm.
+[2024-11-25 19:51:07.339 INF] [INFO] [CenterForm][S] Getting center coordinates. {X=1060,Y=-1122,Width=2248,Height=-212}
+[2024-11-25 19:51:07.339 INF] [INFO] [CenterForm] Coordinates: X:1884 / Y:-1528
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Placing form location, and ordering
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Creating new TabControl.
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Calling UIStyling.StyleTabControl.
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [BuildCoreForm] Return TabControl
+[2024-11-25 19:51:07.339 DBG] [DEBUG] Calling AddTabWithControls for the Streamer Bot Started tab
+[2024-11-25 19:51:07.339 DBG] [DEBUG] Creating tab page: Startup
+[2024-11-25 19:51:07.339 INF] [INFO] [CreateTabPage][S] Creating new Tab Page for: Startup
+[2024-11-25 19:51:07.339 DBG] [DEBUG] Adding tab controls: Startup
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [AddStartupTabControls][S] Starting AddStartupTabControls
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [AddStartupTabControls] Calling Create Layout Panel.
+[2024-11-25 19:51:07.339 INF] [INFO] [TableLayoutPanel][S] Starting Base Tab Table Creation. Cols: 1 Rows: 6
+[2024-11-25 19:51:07.339 DBG] [DEBUG] [TableLayoutPanel] Returning Table Panel
+[2024-11-25 19:51:07.341 DBG] [DEBUG] [AddStartupTabControls] Adding Layout Panel to the Scrollable Panel.
+[2024-11-25 19:51:07.341 DBG] [DEBUG] [AddStartupTabControls] SetMinimumSizeBasedOnChildControls.
+[2024-11-25 19:51:07.341 DBG] [DEBUG] [SetMinimumSizeBasedOnChildControls][S] Starting SetMinimumSizeBasedOnChildControls
+[2024-11-25 19:51:07.341 DBG] [DEBUG] [SetMinimumSizeBasedOnChildControls] Processing Controls.
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Unnested Child Processing. System.Windows.Forms.GroupBox, Text: Manage your configuration.
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.GroupBox, Text: Manage your configuration
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Control Details. Right Control: 420 Right Margin: 2 Right Total: 422
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 58 Bottom Margin: 2 Bottom Total: 60
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None.
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Control Details. Right Control: 413 Right Margin: 0 Right Total: 413
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 51 Bottom Margin: 0 Bottom Total: 51
+[2024-11-25 19:51:07.341 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Remove All.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Remove All
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 79 Right Margin: 3 Right Total: 82
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 27 Bottom Margin: 3 Bottom Total: 30
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Import.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Import
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 161 Right Margin: 3 Right Total: 164
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 27 Bottom Margin: 3 Bottom Total: 30
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Export.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Export
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 243 Right Margin: 3 Right Total: 246
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 27 Bottom Margin: 3 Bottom Total: 30
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: About.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: About
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 325 Right Margin: 3 Right Total: 328
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 27 Bottom Margin: 3 Bottom Total: 30
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Test.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Test
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 407 Right Margin: 3 Right Total: 410
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 27 Bottom Margin: 3 Bottom Total: 30
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 60.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Unnested Child Processing. System.Windows.Forms.GroupBox, Text: Applications to run on bot startup.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.GroupBox, Text: Applications to run on bot startup
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 420 Right Margin: 2 Right Total: 422
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 252 Bottom Margin: 2 Bottom Total: 254
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 413 Right Margin: 0 Right Total: 413
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 187 Bottom Margin: 0 Bottom Total: 187
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.ListBox.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.ListBox
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 124 Right Margin: 3 Right Total: 127
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 100 Bottom Margin: 3 Bottom Total: 103
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 410 Right Margin: 0 Right Total: 410
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 90 Bottom Margin: 0 Bottom Total: 90
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Add Application.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Add Application
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 26 Bottom Margin: 3 Bottom Total: 29
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Remove Application.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Remove Application
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 55 Bottom Margin: 3 Bottom Total: 58
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Add Path.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Add Path
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 84 Bottom Margin: 3 Bottom Total: 87
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 321 Right Margin: 5 Right Total: 326
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 165 Bottom Margin: 1 Bottom Total: 166
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: â–².
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: â–²
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 26 Bottom Margin: 3 Bottom Total: 29
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: â–¼.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: â–¼
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 159 Right Margin: 3 Right Total: 162
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 26 Bottom Margin: 3 Bottom Total: 29
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 254.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Unnested Child Processing. System.Windows.Forms.GroupBox, Text: Allowed Actions.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.GroupBox, Text: Allowed Actions
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 420 Right Margin: 2 Right Total: 422
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 383 Bottom Margin: 2 Bottom Total: 385
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 385.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 413 Right Margin: 0 Right Total: 413
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 124 Bottom Margin: 0 Bottom Total: 124
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 385.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.ListBox.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.ListBox
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 124 Right Margin: 3 Right Total: 127
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 100 Bottom Margin: 3 Bottom Total: 103
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 385.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 410 Right Margin: 0 Right Total: 410
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 61 Bottom Margin: 0 Bottom Total: 61
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 385.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Add Action.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Add Action
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 26 Bottom Margin: 3 Bottom Total: 29
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 385.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Remove Action.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Remove Action
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 55 Bottom Margin: 3 Bottom Total: 58
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 385.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Unnested Child Processing. System.Windows.Forms.GroupBox, Text: Blocked Actions.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.GroupBox, Text: Blocked Actions
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 420 Right Margin: 2 Right Total: 422
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 514 Bottom Margin: 2 Bottom Total: 516
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 516.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 413 Right Margin: 0 Right Total: 413
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 124 Bottom Margin: 0 Bottom Total: 124
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 516.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.ListBox.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.ListBox
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 124 Right Margin: 3 Right Total: 127
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 100 Bottom Margin: 3 Bottom Total: 103
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 516.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 410 Right Margin: 0 Right Total: 410
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 61 Bottom Margin: 0 Bottom Total: 61
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 516.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Add Action.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Add Action
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 26 Bottom Margin: 3 Bottom Total: 29
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 516.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Remove Action.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Remove Action
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 78 Right Margin: 3 Right Total: 81
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 55 Bottom Margin: 3 Bottom Total: 58
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 516.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Unnested Child Processing. System.Windows.Forms.GroupBox, Text: Load Applications on Startup.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.GroupBox, Text: Load Applications on Startup
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 420 Right Margin: 2 Right Total: 422
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 579 Bottom Margin: 2 Bottom Total: 581
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.TableLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.None
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 413 Right Margin: 0 Right Total: 413
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 58 Bottom Margin: 0 Bottom Total: 58
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.RadioButton, Checked: False.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.RadioButton, Checked: False
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 53 Right Margin: 3 Right Total: 56
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 28 Bottom Margin: 3 Bottom Total: 31
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.RadioButton, Checked: False.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.RadioButton, Checked: False
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 109 Right Margin: 3 Right Total: 112
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 28 Bottom Margin: 3 Bottom Total: 31
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.RadioButton, Checked: False.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.RadioButton, Checked: False
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 180 Right Margin: 3 Right Total: 183
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 28 Bottom Margin: 3 Bottom Total: 31
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Label, Text: Delay (In seconds).
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Label, Text: Delay (In seconds)
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 356 Right Margin: 3 Right Total: 359
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 37 Bottom Margin: 0 Bottom Total: 37
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.NumericUpDown, Minimum = 0, Maximum = 30.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.NumericUpDown, Minimum = 0, Maximum = 30
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 402 Right Margin: 0 Right Total: 402
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 31 Bottom Margin: 0 Bottom Total: 31
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.UpDownBase+UpDownButtons.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.UpDownBase+UpDownButtons
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 39 Right Margin: 3 Right Total: 42
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 24 Bottom Margin: 3 Bottom Total: 27
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.UpDownBase+UpDownEdit, Text: 2.
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.UpDownBase+UpDownEdit, Text: 2
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Right Control: 22 Right Margin: 3 Right Total: 25
+[2024-11-25 19:51:07.342 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 23 Bottom Margin: 3 Bottom Total: 26
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 581.
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Unnested Child Processing. System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle.
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.FlowLayoutPanel, BorderStyle: System.Windows.Forms.BorderStyle.FixedSingle
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details. Right Control: 308 Right Margin: 0 Right Total: 308
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 627 Bottom Margin: 0 Bottom Total: 627
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 627.
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Save.
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Save
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details. Right Control: 85 Right Margin: 10 Right Total: 95
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 33 Bottom Margin: 10 Bottom Total: 43
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 627.
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Nested Child Processing. System.Windows.Forms.Button, Text: Close.
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details: System.Windows.Forms.Button, Text: Close
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details. Right Control: 180 Right Margin: 10 Right Total: 190
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Control Details. Bottom Control: 33 Bottom Margin: 10 Bottom Total: 43
+[2024-11-25 19:51:07.343 INF] [INFO] [ProcessControl] Max Dimensions. Width: 422 Height: 627.
+[2024-11-25 19:51:07.343 INF] [INFO] Max Height: 432.
+[2024-11-25 19:51:07.343 INF] [INFO] Max Height: 637.
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Update content sizes: 637.
+[2024-11-25 19:51:07.343 INF] [INFO] [AddStartupTabControls] Adding the scrollable panel to the tab page. Size: {Width=432, Height=637}
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Adding tab page to form: Startup
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Calling AddTabWithControls for the Stream Ending tab
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Calling AddTabWithControls for the Support Me tab
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Calling InitialiseControls.
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Calling: StyleFormUserActionControls
+[2024-11-25 19:51:07.343 DBG] [DEBUG] Styling Form Interaction Controls.
+[2024-11-25 19:51:07.346 DBG] [DEBUG] Calling: StyleApplicationListControls
+[2024-11-25 19:51:07.346 DBG] [DEBUG] Styling Application List Controls.
+[2024-11-25 19:51:07.350 DBG] [DEBUG] Calling: StyleActionListsControls
+[2024-11-25 19:51:07.350 DBG] [DEBUG] Styling Action List Controls.
+[2024-11-25 19:51:07.356 DBG] [DEBUG] Calling: StyleStartupConfigControls
+[2024-11-25 19:51:07.356 DBG] [DEBUG] Styling Start Up Config Controls.
+[2024-11-25 19:51:07.358 DBG] [DEBUG] Calling: StyleFormFlowControls
+[2024-11-25 19:51:07.358 DBG] [DEBUG] Styling Form Flow Controls.
+[2024-11-25 19:51:07.359 DBG] [DEBUG] Adding TabControl to the base form.
+[2024-11-25 19:51:07.398 INF] [INFO] [ResizeFormToFitContent] Initial Form Size: Width=600, Height=600
+[2024-11-25 19:51:07.398 INF] [INFO] [Environment] Screen Resolution: 3840x1600
+[2024-11-25 19:51:07.398 INF] [INFO] [Environment] Working Area: 3840x1552
+[2024-11-25 19:51:07.398 INF] [INFO] [Environment] DPI Scaling: 96 DPI
+[2024-11-25 19:51:07.398 INF] [INFO] [Environment] OS Version: Microsoft Windows NT 10.0.26100.0
+[2024-11-25 19:51:07.398 INF] [INFO] [Environment] .NET Runtime Version: 4.0.30319.42000
+[2024-11-25 19:51:07.398 INF] [INFO] [ResizeFormToFitContent] Form AutoSizeMode: GrowAndShrink
+[2024-11-25 19:51:07.398 INF] [INFO] [CalculateDynamicHeight] Processing controls at Nesting Level 0
+[2024-11-25 19:51:07.398 INF] [INFO] [Control] Name=, Type=TabControl, Text=
+[2024-11-25 19:51:07.398 INF] [INFO]     Location: X=0, Y=0, Size: Width=584, Height=561
+[2024-11-25 19:51:07.398 INF] [INFO]     Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.398 INF] [INFO]     Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.398 INF] [INFO]     Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.398 INF] [INFO]     AutoSize: False
+[2024-11-25 19:51:07.398 INF] [INFO]     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.398 INF] [INFO]     Preferred Size: Height=100, Width=200
+[2024-11-25 19:51:07.398 INF] [INFO]     Calculated Size (with Margins): Height=106, Width=206
+[2024-11-25 19:51:07.398 INF] [INFO]     Processing child controls of ...
+[2024-11-25 19:51:07.398 INF] [INFO]     [CalculateDynamicHeight] Processing controls at Nesting Level 1
+[2024-11-25 19:51:07.398 INF] [INFO]     [Control] Name=, Type=TabPage, Text=Startup
+[2024-11-25 19:51:07.398 INF] [INFO]         Location: X=4, Y=24, Size: Width=576, Height=533
+[2024-11-25 19:51:07.398 INF] [INFO]         Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=10,Top=10,Right=10,Bottom=10}
+[2024-11-25 19:51:07.398 INF] [INFO]         Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.398 INF] [INFO]         Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.398 INF] [INFO]         AutoSize: False
+[2024-11-25 19:51:07.398 INF] [INFO]         AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.398 INF] [INFO]         Preferred Size: Height=20, Width=20
+[2024-11-25 19:51:07.398 INF] [INFO]         Calculated Size (with Margins): Height=26, Width=26
+[2024-11-25 19:51:07.398 INF] [INFO]         Processing child controls of ...
+[2024-11-25 19:51:07.398 INF] [INFO]         [CalculateDynamicHeight] Processing controls at Nesting Level 2
+[2024-11-25 19:51:07.398 INF] [INFO]         [Control] Name=, Type=Panel, Text=
+[2024-11-25 19:51:07.398 INF] [INFO]             Location: X=10, Y=10, Size: Width=556, Height=637
+[2024-11-25 19:51:07.398 INF] [INFO]             Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.398 INF] [INFO]             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.398 INF] [INFO]             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.398 INF] [INFO]             AutoSize: False
+[2024-11-25 19:51:07.398 INF] [INFO]             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]             Preferred Size: Height=697, Width=432
+[2024-11-25 19:51:07.399 INF] [INFO]             Calculated Size (with Margins): Height=703, Width=438
+[2024-11-25 19:51:07.399 INF] [INFO]             Processing child controls of ...
+[2024-11-25 19:51:07.399 INF] [INFO]             [CalculateDynamicHeight] Processing controls at Nesting Level 3
+[2024-11-25 19:51:07.399 INF] [INFO]             [Control] Name=, Type=TableLayoutPanel, Text=
+[2024-11-25 19:51:07.399 INF] [INFO]                 Location: X=0, Y=0, Size: Width=539, Height=697
+[2024-11-25 19:51:07.399 INF] [INFO]                 Margins: {Left=2,Top=2,Right=2,Bottom=2}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.399 INF] [INFO]                 Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.399 INF] [INFO]                 Anchor: Top, Left, Dock: Top
+[2024-11-25 19:51:07.399 INF] [INFO]                 AutoSize: True
+[2024-11-25 19:51:07.399 INF] [INFO]                 AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported
+[2024-11-25 19:51:07.399 INF] [INFO]                 Preferred Size: Height=697, Width=523
+[2024-11-25 19:51:07.399 INF] [INFO]                 Calculated Size (with Margins): Height=701, Width=527
+[2024-11-25 19:51:07.399 INF] [INFO]                 Processing child controls of ...
+[2024-11-25 19:51:07.399 INF] [INFO]                 [CalculateDynamicHeight] Processing controls at Nesting Level 4
+[2024-11-25 19:51:07.399 INF] [INFO]                 [Control] Name=, Type=GroupBox, Text=Manage your configuration
+[2024-11-25 19:51:07.399 INF] [INFO]                     Location: X=5, Y=5, Size: Width=529, Height=48
+[2024-11-25 19:51:07.399 INF] [INFO]                     Margins: {Left=2,Top=2,Right=2,Bottom=2}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.399 INF] [INFO]                     Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.399 INF] [INFO]                     Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.399 INF] [INFO]                     AutoSize: True
+[2024-11-25 19:51:07.399 INF] [INFO]                     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                     Preferred Size: Height=48, Width=460
+[2024-11-25 19:51:07.399 INF] [INFO]                     Calculated Size (with Margins): Height=52, Width=464
+[2024-11-25 19:51:07.399 INF] [INFO]                     Processing child controls of ...
+[2024-11-25 19:51:07.399 INF] [INFO]                     [CalculateDynamicHeight] Processing controls at Nesting Level 5
+[2024-11-25 19:51:07.399 INF] [INFO]                     [Control] Name=, Type=TableLayoutPanel, Text=
+[2024-11-25 19:51:07.399 INF] [INFO]                         Location: X=2, Y=20, Size: Width=525, Height=26
+[2024-11-25 19:51:07.399 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.399 INF] [INFO]                         Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.399 INF] [INFO]                         Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.399 INF] [INFO]                         AutoSize: True
+[2024-11-25 19:51:07.399 INF] [INFO]                         AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported
+[2024-11-25 19:51:07.399 INF] [INFO]                         Preferred Size: Height=26, Width=456
+[2024-11-25 19:51:07.399 INF] [INFO]                         Calculated Size (with Margins): Height=26, Width=456
+[2024-11-25 19:51:07.399 INF] [INFO]                         Processing child controls of ...
+[2024-11-25 19:51:07.399 INF] [INFO]                         [CalculateDynamicHeight] Processing controls at Nesting Level 6
+[2024-11-25 19:51:07.399 INF] [INFO]                         [Control] Name=, Type=Button, Text=Remove All
+[2024-11-25 19:51:07.399 INF] [INFO]                             Location: X=7, Y=1, Size: Width=90, Height=24
+[2024-11-25 19:51:07.399 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.399 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.399 INF] [INFO]                             Anchor: None, Dock: None
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                             Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                             Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                         [Control] Name=, Type=Button, Text=Import
+[2024-11-25 19:51:07.399 INF] [INFO]                             Location: X=111, Y=1, Size: Width=90, Height=24
+[2024-11-25 19:51:07.399 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.399 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.399 INF] [INFO]                             Anchor: None, Dock: None
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                             Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                             Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                         [Control] Name=, Type=Button, Text=Export
+[2024-11-25 19:51:07.399 INF] [INFO]                             Location: X=215, Y=1, Size: Width=90, Height=24
+[2024-11-25 19:51:07.399 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.399 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.399 INF] [INFO]                             Anchor: None, Dock: None
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                             Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                             Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                         [Control] Name=, Type=Button, Text=About
+[2024-11-25 19:51:07.399 INF] [INFO]                             Location: X=319, Y=1, Size: Width=90, Height=24
+[2024-11-25 19:51:07.399 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.399 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.399 INF] [INFO]                             Anchor: None, Dock: None
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                             Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                             Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                         [Control] Name=, Type=Button, Text=Test
+[2024-11-25 19:51:07.399 INF] [INFO]                             Location: X=425, Y=1, Size: Width=90, Height=24
+[2024-11-25 19:51:07.399 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.399 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.399 INF] [INFO]                             Anchor: None, Dock: None
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.399 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                             Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                             Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.399 INF] [INFO]                         [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 6: Height=165, Width=525
+[2024-11-25 19:51:07.399 INF] [INFO]                     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 5: Height=201, Width=537
+[2024-11-25 19:51:07.399 INF] [INFO]                 [Control] Name=, Type=GroupBox, Text=Applications to run on bot startup
+[2024-11-25 19:51:07.399 INF] [INFO]                     Location: X=5, Y=58, Size: Width=529, Height=194
+[2024-11-25 19:51:07.399 INF] [INFO]                     Margins: {Left=2,Top=2,Right=2,Bottom=2}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.399 INF] [INFO]                     Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.399 INF] [INFO]                     Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.399 INF] [INFO]                     AutoSize: True
+[2024-11-25 19:51:07.399 INF] [INFO]                     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.399 INF] [INFO]                     Preferred Size: Height=194, Width=391
+[2024-11-25 19:51:07.399 INF] [INFO]                     Calculated Size (with Margins): Height=198, Width=395
+[2024-11-25 19:51:07.399 INF] [INFO]                     Processing child controls of ...
+[2024-11-25 19:51:07.399 INF] [INFO]                     [CalculateDynamicHeight] Processing controls at Nesting Level 5
+[2024-11-25 19:51:07.399 INF] [INFO]                     [Control] Name=, Type=TableLayoutPanel, Text=
+[2024-11-25 19:51:07.399 INF] [INFO]                         Location: X=2, Y=20, Size: Width=525, Height=172
+[2024-11-25 19:51:07.400 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.400 INF] [INFO]                         Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.400 INF] [INFO]                         Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.400 INF] [INFO]                         AutoSize: True
+[2024-11-25 19:51:07.400 INF] [INFO]                         AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported
+[2024-11-25 19:51:07.400 INF] [INFO]                         Preferred Size: Height=172, Width=387
+[2024-11-25 19:51:07.400 INF] [INFO]                         Calculated Size (with Margins): Height=172, Width=387
+[2024-11-25 19:51:07.400 INF] [INFO]                         Processing child controls of ...
+[2024-11-25 19:51:07.400 INF] [INFO]                         [CalculateDynamicHeight] Processing controls at Nesting Level 6
+[2024-11-25 19:51:07.400 INF] [INFO]                         [Control] Name=, Type=ListBox, Text=
+[2024-11-25 19:51:07.400 INF] [INFO]                             Location: X=6, Y=6, Size: Width=388, Height=138
+[2024-11-25 19:51:07.400 INF] [INFO]                             Margins: {Left=5,Top=5,Right=5,Bottom=0}, Padding: {Left=5,Top=5,Right=5,Bottom=0}
+[2024-11-25 19:51:07.400 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.400 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.400 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.400 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.400 INF] [INFO]                             Preferred Size: Height=29, Width=33
+[2024-11-25 19:51:07.400 INF] [INFO]                             Calculated Size (with Margins): Height=34, Width=43
+[2024-11-25 19:51:07.400 INF] [INFO]                         [Control] Name=, Type=FlowLayoutPanel, Text=
+[2024-11-25 19:51:07.400 INF] [INFO]                             Location: X=400, Y=1, Size: Width=124, Height=86
+[2024-11-25 19:51:07.400 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.400 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.400 INF] [INFO]                             Anchor: Top, Dock: None
+[2024-11-25 19:51:07.400 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.400 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.400 INF] [INFO]                             Preferred Size: Height=86, Width=124
+[2024-11-25 19:51:07.400 INF] [INFO]                             Calculated Size (with Margins): Height=86, Width=124
+[2024-11-25 19:51:07.400 INF] [INFO]                             Processing child controls of ...
+[2024-11-25 19:51:07.400 INF] [INFO]                             [CalculateDynamicHeight] Processing controls at Nesting Level 7
+[2024-11-25 19:51:07.400 INF] [INFO]                             [Control] Name=, Type=Button, Text=Add Application
+[2024-11-25 19:51:07.400 INF] [INFO]                                 Location: X=1, Y=3, Size: Width=120, Height=24
+[2024-11-25 19:51:07.400 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Preferred Size: Height=29, Width=120
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=122
+[2024-11-25 19:51:07.401 INF] [INFO]                             [Control] Name=, Type=Button, Text=Remove Application
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Location: X=1, Y=31, Size: Width=120, Height=24
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Visibility: Visible=True, Enabled=False, TabStop=True
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Preferred Size: Height=29, Width=122
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=124
+[2024-11-25 19:51:07.401 INF] [INFO]                             [Control] Name=, Type=Button, Text=Add Path
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Location: X=1, Y=59, Size: Width=120, Height=24
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Preferred Size: Height=29, Width=120
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=122
+[2024-11-25 19:51:07.401 INF] [INFO]                             [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 7: Height=109, Width=131
+[2024-11-25 19:51:07.401 INF] [INFO]                         [Control] Name=, Type=FlowLayoutPanel, Text=
+[2024-11-25 19:51:07.401 INF] [INFO]                             Location: X=348, Y=148, Size: Width=46, Height=22
+[2024-11-25 19:51:07.401 INF] [INFO]                             Margins: {Left=1,Top=1,Right=5,Bottom=1}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.401 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.401 INF] [INFO]                             Anchor: Right, Dock: None
+[2024-11-25 19:51:07.401 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.401 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                             Preferred Size: Height=22, Width=46
+[2024-11-25 19:51:07.401 INF] [INFO]                             Calculated Size (with Margins): Height=24, Width=52
+[2024-11-25 19:51:07.401 INF] [INFO]                             Processing child controls of ...
+[2024-11-25 19:51:07.401 INF] [INFO]                             [CalculateDynamicHeight] Processing controls at Nesting Level 7
+[2024-11-25 19:51:07.401 INF] [INFO]                             [Control] Name=, Type=Button, Text=â–²
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Location: X=1, Y=0, Size: Width=20, Height=20
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Margins: {Left=1,Top=0,Right=1,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Preferred Size: Height=30, Width=27
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Calculated Size (with Margins): Height=30, Width=29
+[2024-11-25 19:51:07.401 INF] [INFO]                             [Control] Name=, Type=Button, Text=â–¼
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Location: X=23, Y=0, Size: Width=20, Height=20
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Margins: {Left=1,Top=0,Right=1,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.401 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Preferred Size: Height=30, Width=27
+[2024-11-25 19:51:07.401 INF] [INFO]                                 Calculated Size (with Margins): Height=30, Width=29
+[2024-11-25 19:51:07.401 INF] [INFO]                             [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 7: Height=70, Width=53
+[2024-11-25 19:51:07.401 INF] [INFO]                         [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 6: Height=333, Width=534
+[2024-11-25 19:51:07.401 INF] [INFO]                     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 5: Height=515, Width=544
+[2024-11-25 19:51:07.401 INF] [INFO]                 [Control] Name=, Type=GroupBox, Text=Allowed Actions
+[2024-11-25 19:51:07.401 INF] [INFO]                     Location: X=5, Y=257, Size: Width=529, Height=169
+[2024-11-25 19:51:07.401 INF] [INFO]                     Margins: {Left=2,Top=2,Right=2,Bottom=2}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.401 INF] [INFO]                     Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.401 INF] [INFO]                     Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.401 INF] [INFO]                     AutoSize: True
+[2024-11-25 19:51:07.401 INF] [INFO]                     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.401 INF] [INFO]                     Preferred Size: Height=169, Width=513
+[2024-11-25 19:51:07.401 INF] [INFO]                     Calculated Size (with Margins): Height=173, Width=517
+[2024-11-25 19:51:07.401 INF] [INFO]                     Processing child controls of ...
+[2024-11-25 19:51:07.402 INF] [INFO]                     [CalculateDynamicHeight] Processing controls at Nesting Level 5
+[2024-11-25 19:51:07.402 INF] [INFO]                     [Control] Name=, Type=TableLayoutPanel, Text=
+[2024-11-25 19:51:07.402 INF] [INFO]                         Location: X=2, Y=20, Size: Width=525, Height=147
+[2024-11-25 19:51:07.402 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.402 INF] [INFO]                         Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.402 INF] [INFO]                         Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.402 INF] [INFO]                         AutoSize: True
+[2024-11-25 19:51:07.402 INF] [INFO]                         AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported
+[2024-11-25 19:51:07.402 INF] [INFO]                         Preferred Size: Height=147, Width=509
+[2024-11-25 19:51:07.402 INF] [INFO]                         Calculated Size (with Margins): Height=147, Width=509
+[2024-11-25 19:51:07.402 INF] [INFO]                         Processing child controls of ...
+[2024-11-25 19:51:07.402 INF] [INFO]                         [CalculateDynamicHeight] Processing controls at Nesting Level 6
+[2024-11-25 19:51:07.402 INF] [INFO]                         [Control] Name=, Type=ListBox, Text=
+[2024-11-25 19:51:07.402 INF] [INFO]                             Location: X=6, Y=6, Size: Width=388, Height=138
+[2024-11-25 19:51:07.402 INF] [INFO]                             Margins: {Left=5,Top=5,Right=5,Bottom=0}, Padding: {Left=5,Top=5,Right=5,Bottom=0}
+[2024-11-25 19:51:07.402 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.402 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                             Preferred Size: Height=29, Width=33
+[2024-11-25 19:51:07.402 INF] [INFO]                             Calculated Size (with Margins): Height=34, Width=43
+[2024-11-25 19:51:07.402 INF] [INFO]                         [Control] Name=, Type=FlowLayoutPanel, Text=
+[2024-11-25 19:51:07.402 INF] [INFO]                             Location: X=400, Y=1, Size: Width=124, Height=58
+[2024-11-25 19:51:07.402 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.402 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.402 INF] [INFO]                             Anchor: Top, Dock: None
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                             Preferred Size: Height=30, Width=246
+[2024-11-25 19:51:07.402 INF] [INFO]                             Calculated Size (with Margins): Height=30, Width=246
+[2024-11-25 19:51:07.402 INF] [INFO]                             Processing child controls of ...
+[2024-11-25 19:51:07.402 INF] [INFO]                             [CalculateDynamicHeight] Processing controls at Nesting Level 7
+[2024-11-25 19:51:07.402 INF] [INFO]                             [Control] Name=, Type=Button, Text=Add Action
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Location: X=1, Y=3, Size: Width=120, Height=24
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.402 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.402 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Preferred Size: Height=29, Width=120
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=122
+[2024-11-25 19:51:07.402 INF] [INFO]                             [Control] Name=, Type=Button, Text=Remove Action
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Location: X=1, Y=31, Size: Width=120, Height=24
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Visibility: Visible=True, Enabled=False, TabStop=True
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.402 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.402 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Preferred Size: Height=29, Width=120
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=122
+[2024-11-25 19:51:07.402 INF] [INFO]                             [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 7: Height=76, Width=131
+[2024-11-25 19:51:07.402 INF] [INFO]                         [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 6: Height=150, Width=534
+[2024-11-25 19:51:07.402 INF] [INFO]                     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 5: Height=307, Width=544
+[2024-11-25 19:51:07.402 INF] [INFO]                 [Control] Name=, Type=GroupBox, Text=Blocked Actions
+[2024-11-25 19:51:07.402 INF] [INFO]                     Location: X=5, Y=431, Size: Width=529, Height=169
+[2024-11-25 19:51:07.402 INF] [INFO]                     Margins: {Left=2,Top=2,Right=2,Bottom=2}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.402 INF] [INFO]                     Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.402 INF] [INFO]                     Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.402 INF] [INFO]                     AutoSize: True
+[2024-11-25 19:51:07.402 INF] [INFO]                     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                     Preferred Size: Height=169, Width=513
+[2024-11-25 19:51:07.402 INF] [INFO]                     Calculated Size (with Margins): Height=173, Width=517
+[2024-11-25 19:51:07.402 INF] [INFO]                     Processing child controls of ...
+[2024-11-25 19:51:07.402 INF] [INFO]                     [CalculateDynamicHeight] Processing controls at Nesting Level 5
+[2024-11-25 19:51:07.402 INF] [INFO]                     [Control] Name=, Type=TableLayoutPanel, Text=
+[2024-11-25 19:51:07.402 INF] [INFO]                         Location: X=2, Y=20, Size: Width=525, Height=147
+[2024-11-25 19:51:07.402 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.402 INF] [INFO]                         Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.402 INF] [INFO]                         Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.402 INF] [INFO]                         AutoSize: True
+[2024-11-25 19:51:07.402 INF] [INFO]                         AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported
+[2024-11-25 19:51:07.402 INF] [INFO]                         Preferred Size: Height=147, Width=509
+[2024-11-25 19:51:07.402 INF] [INFO]                         Calculated Size (with Margins): Height=147, Width=509
+[2024-11-25 19:51:07.402 INF] [INFO]                         Processing child controls of ...
+[2024-11-25 19:51:07.402 INF] [INFO]                         [CalculateDynamicHeight] Processing controls at Nesting Level 6
+[2024-11-25 19:51:07.402 INF] [INFO]                         [Control] Name=, Type=ListBox, Text=
+[2024-11-25 19:51:07.402 INF] [INFO]                             Location: X=6, Y=6, Size: Width=388, Height=138
+[2024-11-25 19:51:07.402 INF] [INFO]                             Margins: {Left=5,Top=5,Right=5,Bottom=0}, Padding: {Left=5,Top=5,Right=5,Bottom=0}
+[2024-11-25 19:51:07.402 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.402 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                             Preferred Size: Height=29, Width=33
+[2024-11-25 19:51:07.402 INF] [INFO]                             Calculated Size (with Margins): Height=34, Width=43
+[2024-11-25 19:51:07.402 INF] [INFO]                         [Control] Name=, Type=FlowLayoutPanel, Text=
+[2024-11-25 19:51:07.402 INF] [INFO]                             Location: X=400, Y=1, Size: Width=124, Height=58
+[2024-11-25 19:51:07.402 INF] [INFO]                             Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.402 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.402 INF] [INFO]                             Anchor: Top, Dock: None
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.402 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                             Preferred Size: Height=30, Width=246
+[2024-11-25 19:51:07.402 INF] [INFO]                             Calculated Size (with Margins): Height=30, Width=246
+[2024-11-25 19:51:07.402 INF] [INFO]                             Processing child controls of ...
+[2024-11-25 19:51:07.402 INF] [INFO]                             [CalculateDynamicHeight] Processing controls at Nesting Level 7
+[2024-11-25 19:51:07.402 INF] [INFO]                             [Control] Name=, Type=Button, Text=Add Action
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Location: X=1, Y=3, Size: Width=120, Height=24
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.402 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.402 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Preferred Size: Height=29, Width=120
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=122
+[2024-11-25 19:51:07.402 INF] [INFO]                             [Control] Name=, Type=Button, Text=Remove Action
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Location: X=1, Y=31, Size: Width=120, Height=24
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Margins: {Left=1,Top=3,Right=1,Bottom=1}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.402 INF] [INFO]                                 Visibility: Visible=True, Enabled=False, TabStop=True
+[2024-11-25 19:51:07.403 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.403 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.403 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.403 INF] [INFO]                                 Preferred Size: Height=29, Width=120
+[2024-11-25 19:51:07.403 INF] [INFO]                                 Calculated Size (with Margins): Height=33, Width=122
+[2024-11-25 19:51:07.403 INF] [INFO]                             [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 7: Height=76, Width=131
+[2024-11-25 19:51:07.403 INF] [INFO]                         [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 6: Height=150, Width=534
+[2024-11-25 19:51:07.403 INF] [INFO]                     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 5: Height=307, Width=544
+[2024-11-25 19:51:07.403 INF] [INFO]                 [Control] Name=, Type=GroupBox, Text=Load Applications on Startup
+[2024-11-25 19:51:07.403 INF] [INFO]                     Location: X=5, Y=605, Size: Width=529, Height=60
+[2024-11-25 19:51:07.403 INF] [INFO]                     Margins: {Left=2,Top=2,Right=2,Bottom=2}, Padding: {Left=2,Top=2,Right=2,Bottom=2}
+[2024-11-25 19:51:07.403 INF] [INFO]                     Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.403 INF] [INFO]                     Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.403 INF] [INFO]                     AutoSize: False
+[2024-11-25 19:51:07.403 INF] [INFO]                     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.403 INF] [INFO]                     Preferred Size: Height=52, Width=381
+[2024-11-25 19:51:07.403 INF] [INFO]                     Calculated Size (with Margins): Height=56, Width=385
+[2024-11-25 19:51:07.403 INF] [INFO]                     Processing child controls of ...
+[2024-11-25 19:51:07.403 INF] [INFO]                     [CalculateDynamicHeight] Processing controls at Nesting Level 5
+[2024-11-25 19:51:07.403 INF] [INFO]                     [Control] Name=, Type=TableLayoutPanel, Text=
+[2024-11-25 19:51:07.403 INF] [INFO]                         Location: X=2, Y=20, Size: Width=525, Height=38
+[2024-11-25 19:51:07.403 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.403 INF] [INFO]                         Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.403 INF] [INFO]                         Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.403 INF] [INFO]                         AutoSize: True
+[2024-11-25 19:51:07.403 INF] [INFO]                         AutoSizeMode (TableLayoutPanel): GrowAndShrink is implicitly supported
+[2024-11-25 19:51:07.403 INF] [INFO]                         Preferred Size: Height=30, Width=377
+[2024-11-25 19:51:07.403 INF] [INFO]                         Calculated Size (with Margins): Height=30, Width=377
+[2024-11-25 19:51:07.403 INF] [INFO]                         Processing child controls of ...
+[2024-11-25 19:51:07.403 INF] [INFO]                         [CalculateDynamicHeight] Processing controls at Nesting Level 6
+[2024-11-25 19:51:07.403 INF] [INFO]                         [Control] Name=, Type=RadioButton, Text=Yes
+[2024-11-25 19:51:07.403 INF] [INFO]                             Location: X=4, Y=4, Size: Width=49, Height=30
+[2024-11-25 19:51:07.403 INF] [INFO]                             Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.403 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.403 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.403 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.403 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.403 INF] [INFO]                             Preferred Size: Height=22, Width=41
+[2024-11-25 19:51:07.403 INF] [INFO]                             Calculated Size (with Margins): Height=28, Width=47
+[2024-11-25 19:51:07.403 INF] [INFO]                         [Control] Name=, Type=RadioButton, Text=No
+[2024-11-25 19:51:07.403 INF] [INFO]                             Location: X=60, Y=4, Size: Width=49, Height=30
+[2024-11-25 19:51:07.403 INF] [INFO]                             Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.403 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.403 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.403 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.403 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.403 INF] [INFO]                             Preferred Size: Height=22, Width=39
+[2024-11-25 19:51:07.403 INF] [INFO]                             Calculated Size (with Margins): Height=28, Width=45
+[2024-11-25 19:51:07.403 INF] [INFO]                         [Control] Name=, Type=RadioButton, Text=Prompt
+[2024-11-25 19:51:07.403 INF] [INFO]                             Location: X=116, Y=4, Size: Width=64, Height=30
+[2024-11-25 19:51:07.403 INF] [INFO]                             Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.403 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.403 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.403 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.403 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.404 INF] [INFO]                             Preferred Size: Height=22, Width=63
+[2024-11-25 19:51:07.404 INF] [INFO]                             Calculated Size (with Margins): Height=28, Width=69
+[2024-11-25 19:51:07.404 INF] [INFO]                         [Control] Name=, Type=Label, Text=Delay (In seconds)
+[2024-11-25 19:51:07.404 INF] [INFO]                             Location: X=336, Y=1, Size: Width=134, Height=36
+[2024-11-25 19:51:07.404 INF] [INFO]                             Margins: {Left=3,Top=0,Right=3,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.404 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.404 INF] [INFO]                             Anchor: Top, Left, Dock: Fill
+[2024-11-25 19:51:07.404 INF] [INFO]                             AutoSize: True
+[2024-11-25 19:51:07.404 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.404 INF] [INFO]                             Preferred Size: Height=23, Width=123
+[2024-11-25 19:51:07.404 INF] [INFO]                             Calculated Size (with Margins): Height=23, Width=129
+[2024-11-25 19:51:07.404 INF] [INFO]                         [Control] Name=, Type=NumericUpDown, Text=2
+[2024-11-25 19:51:07.404 INF] [INFO]                             Location: X=476, Y=6, Size: Width=40, Height=25
+[2024-11-25 19:51:07.404 INF] [INFO]                             Margins: {Left=2,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.404 INF] [INFO]                             Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.404 INF] [INFO]                             Anchor: Left, Dock: None
+[2024-11-25 19:51:07.404 INF] [INFO]                             AutoSize: False
+[2024-11-25 19:51:07.404 INF] [INFO]                             AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.404 INF] [INFO]                             Preferred Size: Height=25, Width=41
+[2024-11-25 19:51:07.404 INF] [INFO]                             Calculated Size (with Margins): Height=25, Width=43
+[2024-11-25 19:51:07.404 INF] [INFO]                             Processing child controls of ...
+[2024-11-25 19:51:07.404 INF] [INFO]                             [CalculateDynamicHeight] Processing controls at Nesting Level 7
+[2024-11-25 19:51:07.404 INF] [INFO]                             [Control] Name=, Type=UpDownButtons, Text=
+[2024-11-25 19:51:07.404 INF] [INFO]                                 Location: X=23, Y=1, Size: Width=16, Height=23
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.405 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.405 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Preferred Size: Height=23, Width=16
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Calculated Size (with Margins): Height=29, Width=22
+[2024-11-25 19:51:07.405 INF] [INFO]                             [Control] Name=, Type=UpDownEdit, Text=2
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Location: X=2, Y=2, Size: Width=20, Height=21
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Margins: {Left=3,Top=3,Right=3,Bottom=3}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.405 INF] [INFO]                                 Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.405 INF] [INFO]                                 AutoSize: False
+[2024-11-25 19:51:07.405 INF] [INFO]                                 AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.406 INF] [INFO]                                 Preferred Size: Height=19, Width=17
+[2024-11-25 19:51:07.406 INF] [INFO]                                 Calculated Size (with Margins): Height=25, Width=23
+[2024-11-25 19:51:07.406 INF] [INFO]                             [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 7: Height=64, Width=49
+[2024-11-25 19:51:07.406 INF] [INFO]                         [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 6: Height=206, Width=526
+[2024-11-25 19:51:07.406 INF] [INFO]                     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 5: Height=246, Width=537
+[2024-11-25 19:51:07.406 INF] [INFO]                 [Control] Name=, Type=FlowLayoutPanel, Text=
+[2024-11-25 19:51:07.406 INF] [INFO]                     Location: X=178, Y=668, Size: Width=182, Height=26
+[2024-11-25 19:51:07.406 INF] [INFO]                     Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=0,Top=0,Right=0,Bottom=0}
+[2024-11-25 19:51:07.406 INF] [INFO]                     Visibility: Visible=True, Enabled=True, TabStop=False
+[2024-11-25 19:51:07.406 INF] [INFO]                     Anchor: None, Dock: None
+[2024-11-25 19:51:07.406 INF] [INFO]                     AutoSize: True
+[2024-11-25 19:51:07.406 INF] [INFO]                     AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.406 INF] [INFO]                     Preferred Size: Height=26, Width=182
+[2024-11-25 19:51:07.406 INF] [INFO]                     Calculated Size (with Margins): Height=26, Width=182
+[2024-11-25 19:51:07.406 INF] [INFO]                     Processing child controls of ...
+[2024-11-25 19:51:07.406 INF] [INFO]                     [CalculateDynamicHeight] Processing controls at Nesting Level 5
+[2024-11-25 19:51:07.406 INF] [INFO]                     [Control] Name=, Type=Button, Text=Save
+[2024-11-25 19:51:07.406 INF] [INFO]                         Location: X=0, Y=0, Size: Width=90, Height=24
+[2024-11-25 19:51:07.406 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.406 INF] [INFO]                         Visibility: Visible=True, Enabled=False, TabStop=True
+[2024-11-25 19:51:07.406 INF] [INFO]                         Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.406 INF] [INFO]                         AutoSize: False
+[2024-11-25 19:51:07.406 INF] [INFO]                         AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.406 INF] [INFO]                         Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.406 INF] [INFO]                         Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.406 INF] [INFO]                     [Control] Name=, Type=Button, Text=Close
+[2024-11-25 19:51:07.406 INF] [INFO]                         Location: X=90, Y=0, Size: Width=90, Height=24
+[2024-11-25 19:51:07.406 INF] [INFO]                         Margins: {Left=0,Top=0,Right=0,Bottom=0}, Padding: {Left=3,Top=3,Right=3,Bottom=3}
+[2024-11-25 19:51:07.406 INF] [INFO]                         Visibility: Visible=True, Enabled=True, TabStop=True
+[2024-11-25 19:51:07.406 INF] [INFO]                         Anchor: Top, Left, Dock: None
+[2024-11-25 19:51:07.406 INF] [INFO]                         AutoSize: False
+[2024-11-25 19:51:07.406 INF] [INFO]                         AutoSizeMode: Not Applicable
+[2024-11-25 19:51:07.406 INF] [INFO]                         Preferred Size: Height=31, Width=90
+[2024-11-25 19:51:07.406 INF] [INFO]                         Calculated Size (with Margins): Height=31, Width=90
+[2024-11-25 19:51:07.406 INF] [INFO]                     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 5: Height=72, Width=190
+[2024-11-25 19:51:07.406 INF] [INFO]                 [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 4: Height=2336, Width=554
+[2024-11-25 19:51:07.406 INF] [INFO]             [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 3: Height=3047, Width=564
+[2024-11-25 19:51:07.406 INF] [INFO]         [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 2: Height=3760, Width=576
+[2024-11-25 19:51:07.406 INF] [INFO]     [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 1: Height=3796, Width=590
+[2024-11-25 19:51:07.406 INF] [INFO] [CalculateDynamicHeight] Total Calculated Dimensions at Nesting Level 0: Height=3912, Width=600
+[2024-11-25 19:51:07.406 INF] [INFO] [ResizeFormToFitContent] Calculated Required Dimensions: Height=3912, Width=600
+[2024-11-25 19:51:07.408 INF] [INFO] [ResizeFormToFitContent] Resized Form Size: Width=600, Height=600
+[2024-11-25 19:51:07.408 INF] [INFO] [ResizeFormToFitContent] Final Form Size: Width=600, Height=600
+[2024-11-25 19:51:07.408 INF] [INFO] [Summary] Total Controls Processed: 180
+[2024-11-25 19:51:07.408 INF] [INFO] [Summary] Visible Controls: 0, Invisible Controls: 0
+[2024-11-25 19:51:07.408 INF] [INFO] [Summary] Maximum Nesting Depth Reached: 7
+
+Issue: 
+The form size is wrong. As we can see in the image it should be around 800 height, but is finishing at 600. Why? 

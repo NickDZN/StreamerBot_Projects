@@ -1,34 +1,39 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel; // For TypeDescriptor and EventDescriptor
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection; // For BindingFlags
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
-using System.ComponentModel; // For TypeDescriptor and EventDescriptor
-using System.Reflection; // For BindingFlags
 
 public class CPHInline
 {
     // Importing user32.dll to use necessary methods
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
     private static LoadStartupConfigForm mainFormInstance = null;
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
+
     public bool Execute()
     {
-        // Start Execution and create centralised SB instance. 
+        // Start Execution and create centralised SB instance.
         CPH.LogDebug("SBSAM Loaded.");
         SB.CPH = CPH;
         SB.args = args;
-        CPHLogger.LogV("CPH + Args Created. Centralised methods enabled.");
+        
         // Attempt to get the handle of the currently active window
+        CPHLogger.LogV("[FORM INIT] Get Foreground Window.");
         IntPtr activeWindowHandle = GetForegroundWindow();
         if (activeWindowHandle == IntPtr.Zero)
         {
@@ -39,7 +44,9 @@ public class CPHInline
         // Get the window details of the main Streamer.bot instance which this is loaded from.
         StringBuilder windowTitle = new StringBuilder(256);
         GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
-        CPHLogger.LogI($"Window Details: Active Window Handle is {activeWindowHandle}. WindowTitle is {windowTitle}. Window Capacity is: {windowTitle.Capacity}");
+        CPHLogger.LogI($"Window Details: Active Window Handle is {activeWindowHandle}. WindowTitle is {windowTitle}. "
+                     + $"Window Capacity is: {windowTitle.Capacity}"
+        );
         // Get the dimensions of the active window
         if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
         {
@@ -47,12 +54,18 @@ public class CPHInline
             return false;
         }
 
-        CPHLogger.LogI($"Active Window Rect Details: " + $"Size: {activeWindowRect.Size}. Height: {activeWindowRect.Height}. Width: {activeWindowRect.Width} " + $"Raw Rectangle Values: Left={activeWindowRect.Left}, Top={activeWindowRect.Top}, Right={activeWindowRect.Right}, Bottom={activeWindowRect.Bottom}");
+        CPHLogger.LogI(
+            $"Active Window Rect Details: "
+                + $"Size: {activeWindowRect.Size}. Height: {activeWindowRect.Height}. Width: {activeWindowRect.Width} "
+                + $"Raw Rectangle Values: Left={activeWindowRect.Left}, Top={activeWindowRect.Top}, Right={activeWindowRect.Right}, Bottom={activeWindowRect.Bottom}"
+        );
         // Validate and fix dimensions if required
         if (activeWindowRect.Top > activeWindowRect.Bottom || activeWindowRect.Height < 0)
         {
             activeWindowRect.Height = Math.Abs(activeWindowRect.Bottom - activeWindowRect.Top);
-            CPHLogger.LogW($"Negative height detected. Corrected Height: {activeWindowRect.Height}");
+            CPHLogger.LogW(
+                $"Negative height detected. Corrected Height: {activeWindowRect.Height}"
+            );
         }
 
         if (activeWindowRect.Left > activeWindowRect.Right || activeWindowRect.Width < 0)
@@ -88,7 +101,9 @@ public class CPHInline
                     mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
                     Application.ThreadException += (sender, args) =>
                     {
-                        CPHLogger.LogE($"Unhandled exception in STA thread: {args.Exception.Message}\n{args.Exception.StackTrace}");
+                        CPHLogger.LogE(
+                            $"Unhandled exception in STA thread: {args.Exception.Message}\n{args.Exception.StackTrace}"
+                        );
                     };
                     Application.Run(mainFormInstance);
                 }
@@ -110,12 +125,13 @@ public class CPHInline
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 public class LoadStartupConfigForm : Form
 {
     private readonly EventHandlers _eventHandlers;
     private readonly List<ActionData> actionDataList;
+
     public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
     {
         CPHLogger.LogD("[S]LoadStartupConfigForm.");
@@ -124,7 +140,7 @@ public class LoadStartupConfigForm : Form
         _eventHandlers = new EventHandlers();
         SetFormProps(this);
         CenterForm(activeWindowRect);
-        // Create base layout. 
+        // Create base layout.
         var coreLayoutPanelForForm = UIComponentFactory.CreateTableLayoutPanel(rows: 6, columns: 1);
         CPHLogger.LogD("Adding the required controls to the form.");
         AddUserConfigurationControlls(coreLayoutPanelForForm);
@@ -132,11 +148,11 @@ public class LoadStartupConfigForm : Form
         AddSeparateActionGroups(coreLayoutPanelForForm);
         AddBotStartupBehaviourControls(coreLayoutPanelForForm);
         AddFormFlowControls(coreLayoutPanelForForm);
-        // Set Form Properties. 
+        // Set Form Properties.
         CPHLogger.LogV("[LoadStartupConfigForm] Set form variables");
         CPHLogger.LogD("Adding layout panel directly to the form.");
         this.Controls.Add(coreLayoutPanelForForm);
-        // Log Results.        
+        // Log Results.
         CPHLogger.LogV("[LoadStartupConfigForm] Refresh Layout.");
         this.SuspendLayout();
         this.ResumeLayout();
@@ -155,13 +171,17 @@ public class LoadStartupConfigForm : Form
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name = "activeWindowRect"></param>
     private void CenterForm(Rectangle activeWindowRect)
     {
         CPHLogger.LogD("[S]CenterForm.");
-        CPHLogger.LogI($"Active Window Rect Details: " + $"Size: {activeWindowRect.Size}. Height: {activeWindowRect.Height}. Width: {activeWindowRect.Width} " + $"Raw Rectangle Values: Left={activeWindowRect.Left}, Top={activeWindowRect.Top}, Right={activeWindowRect.Right}, Bottom={activeWindowRect.Bottom}");
+        CPHLogger.LogI(
+            $"Active Window Rect Details: "
+                + $"Size: {activeWindowRect.Size}. Height: {activeWindowRect.Height}. Width: {activeWindowRect.Width} "
+                + $"Raw Rectangle Values: Left={activeWindowRect.Left}, Top={activeWindowRect.Top}, Right={activeWindowRect.Right}, Bottom={activeWindowRect.Bottom}"
+        );
         CPHLogger.LogD("[CenterForm] Calculating form center position.");
         int centerX = activeWindowRect.Left + (activeWindowRect.Width - this.Width) / 2;
         int centerY = activeWindowRect.Top + (activeWindowRect.Height - this.Height) / 2;
@@ -175,7 +195,7 @@ public class LoadStartupConfigForm : Form
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name = "coreLayoutPanelForForm"></param>
     private void AddUserConfigurationControlls(TableLayoutPanel coreLayoutPanelForForm)
@@ -185,14 +205,58 @@ public class LoadStartupConfigForm : Form
         var configurationGroupBox = UIComponentFactory.CreateGroupBox("Manage your configuration");
         // Create TableLayoutPanel for buttons
         CPHLogger.LogV("[AddUserConfigurationControlls] Creating TableLayoutPanel for buttons.");
-        var buttonTable = UIComponentFactory.CreateTableLayoutPanel(rows: 1, columns: 5, columnStyling: Constants.ColumnStyling.Distributed);
+        var buttonTable = UIComponentFactory.CreateTableLayoutPanel(
+            rows: 1,
+            columns: 5,
+            columnStyling: Constants.ColumnStyling.Distributed
+        );
         // Add buttons to the button table
         CPHLogger.LogV("[AddUserConfigurationControlls] Adding buttons to TableLayoutPanel.");
-        buttonTable.Controls.Add(UIComponentFactory.CreateButton("Reset All", Constants.ButtonStyle.Default, _eventHandlers.MainCanvasCloseButton_Click), 0, 0);
-        buttonTable.Controls.Add(UIComponentFactory.CreateButton("Import", Constants.ButtonStyle.Default, _eventHandlers.MainCanvasCloseButton_Click), 1, 0);
-        buttonTable.Controls.Add(UIComponentFactory.CreateButton("Export", Constants.ButtonStyle.Default, _eventHandlers.MainCanvasCloseButton_Click), 2, 0);
-        buttonTable.Controls.Add(UIComponentFactory.CreateButton("About", Constants.ButtonStyle.Default, _eventHandlers.MainCanvasCloseButton_Click), 3, 0);
-        buttonTable.Controls.Add(UIComponentFactory.CreateButton("Test Config", Constants.ButtonStyle.Default, _eventHandlers.MainCanvasCloseButton_Click), 4, 0);
+        buttonTable.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Reset All",
+                Constants.ButtonStyle.Default,
+                _eventHandlers.MainCanvasCloseButton_Click
+            ),
+            0,
+            0
+        );
+        buttonTable.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Import",
+                Constants.ButtonStyle.Default,
+                _eventHandlers.MainCanvasCloseButton_Click
+            ),
+            1,
+            0
+        );
+        buttonTable.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Export",
+                Constants.ButtonStyle.Default,
+                _eventHandlers.MainCanvasCloseButton_Click
+            ),
+            2,
+            0
+        );
+        buttonTable.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "About",
+                Constants.ButtonStyle.Default,
+                _eventHandlers.MainCanvasCloseButton_Click
+            ),
+            3,
+            0
+        );
+        buttonTable.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Test Config",
+                Constants.ButtonStyle.Default,
+                _eventHandlers.MainCanvasCloseButton_Click
+            ),
+            4,
+            0
+        );
         // Add TableLayoutPanel to GroupBox
         CPHLogger.LogV("[AddUserConfigurationControlls] Adding TableLayoutPanel to GroupBox.");
         configurationGroupBox.Controls.Add(buttonTable);
@@ -202,7 +266,7 @@ public class LoadStartupConfigForm : Form
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name = "coreLayoutPanelForForm"></param>
     private void AddPermittedApplicationsSection(TableLayoutPanel coreLayoutPanelForForm)
@@ -210,9 +274,13 @@ public class LoadStartupConfigForm : Form
         CPHLogger.LogD($"[S]AddPermittedApplicationsSection");
         // Create and style the GroupBox for applications
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating GroupBox for applications.");
-        var applicationsGroupBox = UIComponentFactory.CreateGroupBox("Applications to run on bot startup");
-        // Define row/columns settings the table will use. 
-        CPHLogger.LogV("[AddPermittedApplicationsSection] Defining column styles for application table.");
+        var applicationsGroupBox = UIComponentFactory.CreateGroupBox(
+            "Applications to run on bot startup"
+        );
+        // Define row/columns settings the table will use.
+        CPHLogger.LogV(
+            "[AddPermittedApplicationsSection] Defining column styles for application table."
+        );
         var rowStyling = new List<RowStyle>
         {
             new RowStyle(SizeType.Percent, 100f),
@@ -225,7 +293,14 @@ public class LoadStartupConfigForm : Form
         };
         // Create the application table
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating application TableLayoutPanel.");
-        var appTable = UIComponentFactory.CreateTableLayoutPanel(rows: 2, columns: 2, rowStyling: Constants.RowStyling.Custom, columnStyling: Constants.ColumnStyling.Custom, customRowStyles: rowStyling, customColumnStyles: columnStyling);
+        var appTable = UIComponentFactory.CreateTableLayoutPanel(
+            rows: 2,
+            columns: 2,
+            rowStyling: Constants.RowStyling.Custom,
+            columnStyling: Constants.ColumnStyling.Custom,
+            customRowStyles: rowStyling,
+            customColumnStyles: columnStyling
+        );
         // Add a ListBox for applications in the left column, first row
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating ListBox for applications.");
         var appListBox = UIComponentFactory.CreateListBox();
@@ -233,30 +308,76 @@ public class LoadStartupConfigForm : Form
         CPHLogger.LogV("[AddPermittedApplicationsSection] Add Listbox to table.");
         appTable.Controls.Add(appListBox, 0, 0);
         // Create a FlowLayoutPanel for Add/Remove buttons
-        CPHLogger.LogV("[AddPermittedApplicationsSection] Creating FlowLayoutPanel for Add/Remove buttons.");
-        var buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(FlowDirection.TopDown, wrapContents: true, autoSize: true, margin: new Padding(5), anchor: AnchorStyles.Top);
+        CPHLogger.LogV(
+            "[AddPermittedApplicationsSection] Creating FlowLayoutPanel for Add/Remove buttons."
+        );
+        var buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(
+            FlowDirection.TopDown,
+            wrapContents: true,
+            autoSize: true,
+            margin: new Padding(5),
+            anchor: AnchorStyles.Top
+        );
         // Add buttons for managing applications
         CPHLogger.LogV("[AddPermittedApplicationsSection] Add buttons for managing applications.");
-        buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Add Application", Constants.ButtonStyle.Longer, _eventHandlers.AddApplication_Click));
+        buttonPanel.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Add Application",
+                Constants.ButtonStyle.Longer,
+                _eventHandlers.AddApplication_Click
+            )
+        );
         //buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Add Application Path", Constants.ButtonStyle.Longer, _eventHandlers.AddApplicationPath_Click));
-        buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Remove Application", Constants.ButtonStyle.Longer, _eventHandlers.RemoveApplication_Click));
+        buttonPanel.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Remove Application",
+                Constants.ButtonStyle.Longer,
+                _eventHandlers.RemoveApplication_Click
+            )
+        );
         appTable.Controls.Add(buttonPanel, 1, 0);
         // Create a FlowLayoutPanel for arrow buttons in the left column, second row
-        CPHLogger.LogV("[AddPermittedApplicationsSection] Creating FlowLayoutPanel for arrow buttons.");
-        var arrowPanel = UIComponentFactory.CreateFlowLayoutPanel(FlowDirection.LeftToRight, wrapContents: true, autoSize: true, margin: new Padding(0), anchor: AnchorStyles.Right);
+        CPHLogger.LogV(
+            "[AddPermittedApplicationsSection] Creating FlowLayoutPanel for arrow buttons."
+        );
+        var arrowPanel = UIComponentFactory.CreateFlowLayoutPanel(
+            FlowDirection.LeftToRight,
+            wrapContents: true,
+            autoSize: true,
+            margin: new Padding(0),
+            anchor: AnchorStyles.Right
+        );
         // Add arrow buttons for reordering applications
-        CPHLogger.LogV("[AddPermittedApplicationsSection] Adding arrow buttons to FlowLayoutPanel.");
-        arrowPanel.Controls.Add(UIComponentFactory.CreateButton("▲", Constants.ButtonStyle.ArrowBtn, _eventHandlers.btnApplicationsUp_Click));
-        arrowPanel.Controls.Add(UIComponentFactory.CreateButton("▼", Constants.ButtonStyle.ArrowBtn, _eventHandlers.btnApplicationsDown_Click));
+        CPHLogger.LogV(
+            "[AddPermittedApplicationsSection] Adding arrow buttons to FlowLayoutPanel."
+        );
+        arrowPanel.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "▲",
+                Constants.ButtonStyle.ArrowBtn,
+                _eventHandlers.btnApplicationsUp_Click
+            )
+        );
+        arrowPanel.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "▼",
+                Constants.ButtonStyle.ArrowBtn,
+                _eventHandlers.btnApplicationsDown_Click
+            )
+        );
         appTable.Controls.Add(arrowPanel, 0, 1);
         // Attach the ListBox event handler for selection changes
-        CPHLogger.LogV("[AddPermittedApplicationsSection] Attaching event handler for ListBox selection changes.");
+        CPHLogger.LogV(
+            "[AddPermittedApplicationsSection] Attaching event handler for ListBox selection changes."
+        );
         appListBox.SelectedIndexChanged += _eventHandlers.ApplicationListBox_SelectedIndexChanged;
         // Add the application table to the GroupBox
         CPHLogger.LogV("[AddPermittedApplicationsSection] TableLayoutPanel added to GroupBox.");
         applicationsGroupBox.Controls.Add(appTable);
         // Add the GroupBox to the main layout
-        CPHLogger.LogV("[AddPermittedApplicationsSection] GroupBox added to main TableLayoutPanel.");
+        CPHLogger.LogV(
+            "[AddPermittedApplicationsSection] GroupBox added to main TableLayoutPanel."
+        );
         coreLayoutPanelForForm.Controls.Add(applicationsGroupBox, 0, 1);
     }
 
@@ -276,8 +397,12 @@ public class LoadStartupConfigForm : Form
         if (control is TableLayoutPanel table)
         {
             CPHLogger.LogI($"  Rows: {table.RowCount}, Columns: {table.ColumnCount}");
-            CPHLogger.LogI($"  RowStyles: {string.Join(", ", table.RowStyles.Cast<RowStyle>().Select(rs => rs.SizeType.ToString()))}");
-            CPHLogger.LogI($"  ColumnStyles: {string.Join(", ", table.ColumnStyles.Cast<ColumnStyle>().Select(cs => cs.SizeType.ToString()))}");
+            CPHLogger.LogI(
+                $"  RowStyles: {string.Join(", ", table.RowStyles.Cast<RowStyle>().Select(rs => rs.SizeType.ToString()))}"
+            );
+            CPHLogger.LogI(
+                $"  ColumnStyles: {string.Join(", ", table.ColumnStyles.Cast<ColumnStyle>().Select(cs => cs.SizeType.ToString()))}"
+            );
         }
 
         // Log details for the parent hierarchy
@@ -300,7 +425,7 @@ public class LoadStartupConfigForm : Form
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name = "coreLayoutPanelForTab"></param>
     private void AddSeparateActionGroups(TableLayoutPanel coreLayoutPanelForTab)
@@ -310,26 +435,62 @@ public class LoadStartupConfigForm : Form
         // Create controls for the "Allowed Actions" group.
         CPHLogger.LogV("[AddSeparateActionGroups] Creating controls for 'Allowed Actions'.");
         var lstActionsPermitted = UIComponentFactory.CreateListBox();
-        var btnAddActionPermitted = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Longer, _eventHandlers.AddActionPermitted_Click);
-        var btnRemoveActionPermitted = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Longer, _eventHandlers.RemoveActionPermitted_Click);
+        var btnAddActionPermitted = UIComponentFactory.CreateButton(
+            "Add",
+            Constants.ButtonStyle.Longer,
+            _eventHandlers.AddActionPermitted_Click
+        );
+        var btnRemoveActionPermitted = UIComponentFactory.CreateButton(
+            "Remove",
+            Constants.ButtonStyle.Longer,
+            _eventHandlers.RemoveActionPermitted_Click
+        );
         // Create controls for the "Blocked Actions" group.
         CPHLogger.LogV("[AddSeparateActionGroups] Creating controls for 'Blocked Actions'.");
         var lstActionsBlocked = UIComponentFactory.CreateListBox();
-        var btnAddActionBlocked = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Longer, _eventHandlers.AddActionBlocked_Click);
-        var btnRemoveActionBlocked = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Longer, _eventHandlers.RemoveActionBlocked_Click);
+        var btnAddActionBlocked = UIComponentFactory.CreateButton(
+            "Add",
+            Constants.ButtonStyle.Longer,
+            _eventHandlers.AddActionBlocked_Click
+        );
+        var btnRemoveActionBlocked = UIComponentFactory.CreateButton(
+            "Remove",
+            Constants.ButtonStyle.Longer,
+            _eventHandlers.RemoveActionBlocked_Click
+        );
         // Create "Allowed Actions" GroupBox
         CPHLogger.LogV("[AddSeparateActionGroups] Creating 'Allowed Actions' GroupBox.");
-        var allowedActionsGroupBox = CreateActionsGroupBox("Allowed Actions", lstActionsPermitted, btnAddActionPermitted, btnRemoveActionPermitted, _eventHandlers.AddActionPermitted_SelIndhanged, _eventHandlers.AddActionPermitted_Click, _eventHandlers.RemoveActionPermitted_Click);
+        var allowedActionsGroupBox = CreateActionsGroupBox(
+            "Allowed Actions",
+            lstActionsPermitted,
+            btnAddActionPermitted,
+            btnRemoveActionPermitted,
+            _eventHandlers.AddActionPermitted_SelIndhanged,
+            _eventHandlers.AddActionPermitted_Click,
+            _eventHandlers.RemoveActionPermitted_Click
+        );
         CPHLogger.LogV("[AddSeparateActionGroups] Creating 'Blocked Actions' GroupBox.");
-        var blockedActionsGroupBox = CreateActionsGroupBox("Blocked Actions", lstActionsBlocked, btnAddActionBlocked, btnRemoveActionBlocked, _eventHandlers.AddActionBlocked_SelIndhanged, _eventHandlers.AddActionBlocked_Click, _eventHandlers.RemoveActionBlocked_Click);
-        CPHLogger.LogV("[AddSeparateActionGroups] Adding 'Allowed Actions' GroupBox to the main TableLayoutPanel.");
+        var blockedActionsGroupBox = CreateActionsGroupBox(
+            "Blocked Actions",
+            lstActionsBlocked,
+            btnAddActionBlocked,
+            btnRemoveActionBlocked,
+            _eventHandlers.AddActionBlocked_SelIndhanged,
+            _eventHandlers.AddActionBlocked_Click,
+            _eventHandlers.RemoveActionBlocked_Click
+        );
+        CPHLogger.LogV(
+            "[AddSeparateActionGroups] Adding 'Allowed Actions' GroupBox to the main TableLayoutPanel."
+        );
         coreLayoutPanelForTab.Controls.Add(allowedActionsGroupBox, 0, 2);
-        CPHLogger.LogV("[AddSeparateActionGroups] Adding 'Blocked Actions' GroupBox to the main TableLayoutPanel.");
+        CPHLogger.LogV(
+            "[AddSeparateActionGroups] Adding 'Blocked Actions' GroupBox to the main TableLayoutPanel."
+        );
         coreLayoutPanelForTab.Controls.Add(blockedActionsGroupBox, 0, 3);
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name = "title"></param>
     /// <param name = "listBox"></param>
@@ -339,7 +500,15 @@ public class LoadStartupConfigForm : Form
     /// <param name = "addButtonClick"></param>
     /// <param name = "removeButtonClick"></param>
     /// <returns></returns>
-    private GroupBox CreateActionsGroupBox(string title, ListBox listBox, Button addButton, Button removeButton, EventHandler listBoxSelected, EventHandler addButtonClick, EventHandler removeButtonClick)
+    private GroupBox CreateActionsGroupBox(
+        string title,
+        ListBox listBox,
+        Button addButton,
+        Button removeButton,
+        EventHandler listBoxSelected,
+        EventHandler addButtonClick,
+        EventHandler removeButtonClick
+    )
     {
         CPHLogger.LogD($"[S]CreateActionsGroupBox - Title: {title}");
         // Create GroupBox using the factory
@@ -354,7 +523,12 @@ public class LoadStartupConfigForm : Form
         };
         // Create TableLayoutPanel
         CPHLogger.LogV("[CreateActionsGroupBox] Creating TableLayoutPanel.");
-        var actionsTable = UIComponentFactory.CreateTableLayoutPanel(rows: 1, columns: 2, columnStyling: Constants.ColumnStyling.Custom, customColumnStyles: columnStyling);
+        var actionsTable = UIComponentFactory.CreateTableLayoutPanel(
+            rows: 1,
+            columns: 2,
+            columnStyling: Constants.ColumnStyling.Custom,
+            customColumnStyles: columnStyling
+        );
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating ListBox for applications.");
         var actionListBox = UIComponentFactory.CreateListBox();
         // Add ListBox to the layout
@@ -362,7 +536,13 @@ public class LoadStartupConfigForm : Form
         actionsTable.Controls.Add(actionListBox, 0, 0);
         // Create FlowLayoutPanel for buttons
         CPHLogger.LogV("[CreateActionsGroupBox] Creating FlowLayoutPanel for Add/Remove buttons.");
-        var buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(FlowDirection.TopDown, wrapContents: true, autoSize: true, margin: new Padding(5), anchor: AnchorStyles.Top);
+        var buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(
+            FlowDirection.TopDown,
+            wrapContents: true,
+            autoSize: true,
+            margin: new Padding(5),
+            anchor: AnchorStyles.Top
+        );
         // Add Add and Remove buttons to the button panel
         CPHLogger.LogV("[CreateActionsGroupBox] Adding 'Add' button to FlowLayoutPanel.");
         buttonPanel.Controls.Add(addButton);
@@ -380,19 +560,25 @@ public class LoadStartupConfigForm : Form
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name = "coreLayoutPanelForTab"></param>
     private void AddBotStartupBehaviourControls(TableLayoutPanel coreLayoutPanelForTab)
     {
         CPHLogger.LogD("[S]AddBotStartupBehaviourControls");
-        CPHLogger.LogI($"[AddBotStartupBehaviourControls] Table Size: {coreLayoutPanelForTab.Size}");
+        CPHLogger.LogI(
+            $"[AddBotStartupBehaviourControls] Table Size: {coreLayoutPanelForTab.Size}"
+        );
         // Create GroupBox for Startup Configuration
-        CPHLogger.LogD("[AddBotStartupBehaviourControls] Creating GroupBox for Startup Configuration.");
+        CPHLogger.LogD(
+            "[AddBotStartupBehaviourControls] Creating GroupBox for Startup Configuration."
+        );
         var startupOptionsGroup = UIComponentFactory.CreateGroupBox("Load Applications on Startup");
         CPHLogger.LogI("[AddBotStartupBehaviourControls] GroupBox created.");
         // Define column styles for the TableLayoutPanel
-        CPHLogger.LogD("[AddBotStartupBehaviourControls] Defining column styles for Startup Configuration panel.");
+        CPHLogger.LogD(
+            "[AddBotStartupBehaviourControls] Defining column styles for Startup Configuration panel."
+        );
         var columnStyling = new List<ColumnStyle>
         {
             new ColumnStyle(SizeType.AutoSize), // Column for "Yes" radio button
@@ -400,11 +586,21 @@ public class LoadStartupConfigForm : Form
             new ColumnStyle(SizeType.AutoSize), // Column for "Prompt" radio button
             new ColumnStyle(SizeType.Percent, 100), // Filler column
             new ColumnStyle(SizeType.AutoSize), // Column for "Delay Label"
-            new ColumnStyle(SizeType.AutoSize) // Column for NumericUpDown control
+            new ColumnStyle(
+                SizeType.AutoSize
+            ) // Column for NumericUpDown control
+            ,
         };
         // Create and style the TableLayoutPanel
-        CPHLogger.LogD("[AddBotStartupBehaviourControls] Creating TableLayoutPanel for Startup Configuration.");
-        var startupOptionsPanel = UIComponentFactory.CreateTableLayoutPanel(rows: 1, columns: 6, columnStyling: Constants.ColumnStyling.Custom, customColumnStyles: columnStyling);
+        CPHLogger.LogD(
+            "[AddBotStartupBehaviourControls] Creating TableLayoutPanel for Startup Configuration."
+        );
+        var startupOptionsPanel = UIComponentFactory.CreateTableLayoutPanel(
+            rows: 1,
+            columns: 6,
+            columnStyling: Constants.ColumnStyling.Custom,
+            customColumnStyles: columnStyling
+        );
         CPHLogger.LogI("[AddBotStartupBehaviourControls] TableLayoutPanel created.");
         // Create and style radio buttons
         CPHLogger.LogD("[AddBotStartupBehaviourControls] Creating and styling radio buttons.");
@@ -413,9 +609,18 @@ public class LoadStartupConfigForm : Form
         var radioStartupConfigPrompt = UIComponentFactory.CreateRadioButton("Prompt", true);
         CPHLogger.LogI("[AddBotStartupBehaviourControls] Radio buttons created.");
         // Style delay label and NumericUpDown
-        CPHLogger.LogD("[AddBotStartupBehaviourControls] Creating and styling delay label and NumericUpDown.");
-        var lblStartupConfigDelay = UIComponentFactory.CreateLabel("Delay (seconds):", textAlign: ContentAlignment.MiddleRight);
-        var numupdwnStartupConfigDelay = UIComponentFactory.CreateNumericUpDown(minimum: 0, maximum: 30, defaultValue: 5);
+        CPHLogger.LogD(
+            "[AddBotStartupBehaviourControls] Creating and styling delay label and NumericUpDown."
+        );
+        var lblStartupConfigDelay = UIComponentFactory.CreateLabel(
+            "Delay (seconds):",
+            textAlign: ContentAlignment.MiddleRight
+        );
+        var numupdwnStartupConfigDelay = UIComponentFactory.CreateNumericUpDown(
+            minimum: 0,
+            maximum: 30,
+            defaultValue: 5
+        );
         CPHLogger.LogI("[AddBotStartupBehaviourControls] Delay label and NumericUpDown created.");
         // Add controls to the layout panel
         CPHLogger.LogD("[AddBotStartupBehaviourControls] Adding controls to TableLayoutPanel.");
@@ -441,15 +646,31 @@ public class LoadStartupConfigForm : Form
         CPHLogger.LogI($"[AddFormFlowControls] Table Size: {coreLayoutPanelForForm.Size}");
         // Create FlowLayoutPanel for buttons
         CPHLogger.LogD("[AddFormFlowControls] Creating FlowLayoutPanel.");
-        var flowControlButtonPanel = UIComponentFactory.CreateFlowLayoutPanel(autoSize: true, wrapContents: false, anchor: AnchorStyles.None);
+        var flowControlButtonPanel = UIComponentFactory.CreateFlowLayoutPanel(
+            autoSize: true,
+            wrapContents: false,
+            anchor: AnchorStyles.None
+        );
         CPHLogger.LogI("[AddFormFlowControls] FlowLayoutPanel created.");
         // Add Save button
         CPHLogger.LogD("[AddFormFlowControls] Adding 'Save' button.");
-        flowControlButtonPanel.Controls.Add(UIComponentFactory.CreateButton("Save", Constants.ButtonStyle.FlowControl, _eventHandlers.MainCanvasSaveButton_Click));
+        flowControlButtonPanel.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Save",
+                Constants.ButtonStyle.FlowControl,
+                _eventHandlers.MainCanvasSaveButton_Click
+            )
+        );
         CPHLogger.LogI("[AddFormFlowControls] 'Save' button added.");
         // Add Close button
         CPHLogger.LogD("[AddFormFlowControls] Adding 'Close' button.");
-        flowControlButtonPanel.Controls.Add(UIComponentFactory.CreateButton("Close", Constants.ButtonStyle.FlowControl, _eventHandlers.MainCanvasCloseButton_Click));
+        flowControlButtonPanel.Controls.Add(
+            UIComponentFactory.CreateButton(
+                "Close",
+                Constants.ButtonStyle.FlowControl,
+                _eventHandlers.MainCanvasCloseButton_Click
+            )
+        );
         CPHLogger.LogI("[AddFormFlowControls] 'Close' button added.");
         // Add FlowLayoutPanel to the main layout
         coreLayoutPanelForForm.Controls.Add(flowControlButtonPanel, 0, 5);
@@ -465,9 +686,23 @@ public class LoadStartupConfigForm : Form
     private void LogControlDetails(Control parent, int depth = 0)
     {
         // Indentation for nested controls
-        string indent = new string (' ', depth * 4);
+        string indent = new string(' ', depth * 4);
         // Log the current control's basic details
-        CPHLogger.LogI($"{indent}Control: {parent.Name ?? parent.GetType().Name}, " + $"Type: {parent.GetType().Name}, " + $"Size: {parent.Size.Width}x{parent.Size.Height}, " + $"Location: {parent.Location.X},{parent.Location.Y}, " + $"Dock: {parent.Dock}, " + $"Anchor: {parent.Anchor}, " + $"AutoSize: {parent.AutoSize}, " + $"AutoSizeMode: {(parent is TableLayoutPanel tlp ? tlp.AutoSizeMode.ToString() : "N/A")}, " + $"MinimumSize: {parent.MinimumSize.Width}x{parent.MinimumSize.Height}, " + $"MaximumSize: {parent.MaximumSize.Width}x{parent.MaximumSize.Height}, " + $"Margin: {parent.Margin.Left},{parent.Margin.Top},{parent.Margin.Right},{parent.Margin.Bottom}, " + $"Padding: {parent.Padding.Left},{parent.Padding.Top},{parent.Padding.Right},{parent.Padding.Bottom}, " + $"Text: \"{parent.Text}\"");
+        CPHLogger.LogI(
+            $"{indent}Control: {parent.Name ?? parent.GetType().Name}, "
+                + $"Type: {parent.GetType().Name}, "
+                + $"Size: {parent.Size.Width}x{parent.Size.Height}, "
+                + $"Location: {parent.Location.X},{parent.Location.Y}, "
+                + $"Dock: {parent.Dock}, "
+                + $"Anchor: {parent.Anchor}, "
+                + $"AutoSize: {parent.AutoSize}, "
+                + $"AutoSizeMode: {(parent is TableLayoutPanel tlp ? tlp.AutoSizeMode.ToString() : "N/A")}, "
+                + $"MinimumSize: {parent.MinimumSize.Width}x{parent.MinimumSize.Height}, "
+                + $"MaximumSize: {parent.MaximumSize.Width}x{parent.MaximumSize.Height}, "
+                + $"Margin: {parent.Margin.Left},{parent.Margin.Top},{parent.Margin.Right},{parent.Margin.Bottom}, "
+                + $"Padding: {parent.Padding.Left},{parent.Padding.Top},{parent.Padding.Right},{parent.Padding.Bottom}, "
+                + $"Text: \"{parent.Text}\""
+        );
         // Log default values and differences for some standard control properties
         LogDefaultValuesComparison(parent, indent);
         // Iterate through child controls recursively
@@ -485,17 +720,29 @@ public class LoadStartupConfigForm : Form
             var defaultInstance = (Control)Activator.CreateInstance(control.GetType());
             // Compare some common properties
             if (control.Dock != defaultInstance.Dock)
-                CPHLogger.LogD($"{indent}  Difference in Dock: Current={control.Dock}, Default={defaultInstance.Dock}");
+                CPHLogger.LogD(
+                    $"{indent}  Difference in Dock: Current={control.Dock}, Default={defaultInstance.Dock}"
+                );
             if (control.Anchor != defaultInstance.Anchor)
-                CPHLogger.LogD($"{indent}  Difference in Anchor: Current={control.Anchor}, Default={defaultInstance.Anchor}");
+                CPHLogger.LogD(
+                    $"{indent}  Difference in Anchor: Current={control.Anchor}, Default={defaultInstance.Anchor}"
+                );
             if (control.AutoSize != defaultInstance.AutoSize)
-                CPHLogger.LogD($"{indent}  Difference in AutoSize: Current={control.AutoSize}, Default={defaultInstance.AutoSize}");
+                CPHLogger.LogD(
+                    $"{indent}  Difference in AutoSize: Current={control.AutoSize}, Default={defaultInstance.AutoSize}"
+                );
             if (control.Font != defaultInstance.Font)
-                CPHLogger.LogD($"{indent}  Difference in Font: Current={control.Font}, Default={defaultInstance.Font}");
+                CPHLogger.LogD(
+                    $"{indent}  Difference in Font: Current={control.Font}, Default={defaultInstance.Font}"
+                );
             if (control.Margin != defaultInstance.Margin)
-                CPHLogger.LogD($"{indent}  Difference in Margin: Current={control.Margin}, Default={defaultInstance.Margin}");
+                CPHLogger.LogD(
+                    $"{indent}  Difference in Margin: Current={control.Margin}, Default={defaultInstance.Margin}"
+                );
             if (control.Padding != defaultInstance.Padding)
-                CPHLogger.LogD($"{indent}  Difference in Padding: Current={control.Padding}, Default={defaultInstance.Padding}");
+                CPHLogger.LogD(
+                    $"{indent}  Difference in Padding: Current={control.Padding}, Default={defaultInstance.Padding}"
+                );
             // Dispose the default instance to free resources
             defaultInstance.Dispose();
         }
@@ -585,7 +832,7 @@ public class EventHandlers
         int a = 1;
     }
 
-    // Reorder the item when dropped in a new position    
+    // Reorder the item when dropped in a new position
     public void MainCanvasSaveButton_Click(object sender, EventArgs e)
     {
         int a = 1;
@@ -675,7 +922,13 @@ public class UIComponentFactory
     /// <param name = "maximum">The maximum value for the NumericUpDown control.</param>
     /// <param name = "value">The default value for the NumericUpDown control.</param>
     /// <returns>A styled <see cref = "NumericUpDown"/> control.</returns>
-    public static NumericUpDown CreateNumericUpDown(int width = 40, int height = 20, int minimum = 0, int maximum = 30, int defaultValue = 2)
+    public static NumericUpDown CreateNumericUpDown(
+        int width = 40,
+        int height = 20,
+        int minimum = 0,
+        int maximum = 30,
+        int defaultValue = 2
+    )
     {
         var numericUpDown = new NumericUpDown
         {
@@ -685,9 +938,12 @@ public class UIComponentFactory
             Maximum = maximum,
             Value = defaultValue,
             Anchor = AnchorStyles.Left,
-            Margin = new Padding(2, 0, 0, 0)
+            Margin = new Padding(2, 0, 0, 0),
         };
-        CPHLogger.LogV($"NumericUpDown created: Width={numericUpDown.Width}, Height={numericUpDown.Height}, Minimum={numericUpDown.Minimum}, " + $"Maximum={numericUpDown.Maximum}, DefaultValue={numericUpDown.Value}");
+        CPHLogger.LogV(
+            $"NumericUpDown created: Width={numericUpDown.Width}, Height={numericUpDown.Height}, Minimum={numericUpDown.Minimum}, "
+                + $"Maximum={numericUpDown.Maximum}, DefaultValue={numericUpDown.Value}"
+        );
         return numericUpDown;
     }
 
@@ -698,7 +954,11 @@ public class UIComponentFactory
     /// <param name = "autoSize">Indicates if the RadioButton should automatically size itself.</param>
     /// <param name = "isChecked">Indicates if the RadioButton is initially checked.</param>
     /// <returns>A styled <see cref = "RadioButton"/> control.</returns>
-    public static RadioButton CreateRadioButton(string text, bool autoSize = true, bool isChecked = false)
+    public static RadioButton CreateRadioButton(
+        string text,
+        bool autoSize = true,
+        bool isChecked = false
+    )
     {
         var radioButton = new RadioButton
         {
@@ -706,9 +966,12 @@ public class UIComponentFactory
             AutoSize = autoSize,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
-            Checked = isChecked
+            Checked = isChecked,
         };
-        CPHLogger.LogV($"RadioButton created. Properties: Text=\"{radioButton.Text}\", AutoSize={radioButton.AutoSize}, Dock={radioButton.Dock}, " + $"TextAlign={radioButton.TextAlign}, Checked={radioButton.Checked}");
+        CPHLogger.LogV(
+            $"RadioButton created. Properties: Text=\"{radioButton.Text}\", AutoSize={radioButton.AutoSize}, Dock={radioButton.Dock}, "
+                + $"TextAlign={radioButton.TextAlign}, Checked={radioButton.Checked}"
+        );
         return radioButton;
     }
 
@@ -720,7 +983,12 @@ public class UIComponentFactory
     /// <param name = "margin">Optional margin for the Label.</param>
     /// <param name = "padding">Optional padding for the Label.</param>
     /// <returns>A styled <see cref = "Label"/> control.</returns>
-    public static Label CreateLabel(string text, ContentAlignment textAlign = ContentAlignment.MiddleLeft, Padding? margin = null, Padding? padding = null)
+    public static Label CreateLabel(
+        string text,
+        ContentAlignment textAlign = ContentAlignment.MiddleLeft,
+        Padding? margin = null,
+        Padding? padding = null
+    )
     {
         var label = new Label
         {
@@ -729,9 +997,12 @@ public class UIComponentFactory
             Dock = DockStyle.Fill,
             TextAlign = textAlign,
             Margin = margin ?? new Padding(5),
-            Padding = padding ?? new Padding(5)
+            Padding = padding ?? new Padding(5),
         };
-        CPHLogger.LogV($"Label created. Properties: Text=\"{label.Text}\", AutoSize={label.AutoSize}, Dock={label.Dock}, TextAlign={label.TextAlign}, " + $"Margin={label.Margin}, Padding={label.Padding}");
+        CPHLogger.LogV(
+            $"Label created. Properties: Text=\"{label.Text}\", AutoSize={label.AutoSize}, Dock={label.Dock}, TextAlign={label.TextAlign}, "
+                + $"Margin={label.Margin}, Padding={label.Padding}"
+        );
         return label;
     }
 
@@ -743,7 +1014,12 @@ public class UIComponentFactory
     /// <param name = "buttonStyle">The style of the button (from <see cref = "Constants.ButtonStyle"/>).</param>
     /// <param name = "btnEnabled">Specifies whether the button is enabled.</param>
     /// <returns>A styled <see cref = "Button"/> control.</returns>
-    public static Button CreateButton(string text, Constants.ButtonStyle style = Constants.ButtonStyle.Default, EventHandler clickEvent = null, bool isEnabled = true)
+    public static Button CreateButton(
+        string text,
+        Constants.ButtonStyle style = Constants.ButtonStyle.Default,
+        EventHandler clickEvent = null,
+        bool isEnabled = true
+    )
     {
         var btn = new Button
         {
@@ -754,7 +1030,7 @@ public class UIComponentFactory
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Microsoft Sans Serif", 8.5f),
             BackColor = Color.White,
-            ForeColor = SystemColors.ControlText
+            ForeColor = SystemColors.ControlText,
         };
         // Apply different styles based on the ButtonStyle enum
         switch (style)
@@ -812,11 +1088,23 @@ public class UIComponentFactory
         if (clickEvent != null)
             btn.Click += clickEvent;
         // Verbose logging of all button properties
-        CPHLogger.LogV($"Button created. Properties: Text=\"{btn.Text}\", Width={btn.Width}, Height={btn.Height}, Enabled={btn.Enabled}, " + $"Margin={btn.Margin}, Padding={btn.Padding}, Style={style}, BackColor={btn.BackColor}, ForeColor={btn.ForeColor}, " + $"FlatStyle={btn.FlatStyle}, BorderSize={btn.FlatAppearance.BorderSize}, BorderColor={btn.FlatAppearance.BorderColor}");
+        CPHLogger.LogV(
+            $"Button created. Properties: Text=\"{btn.Text}\", Width={btn.Width}, Height={btn.Height}, Enabled={btn.Enabled}, "
+                + $"Margin={btn.Margin}, Padding={btn.Padding}, Style={style}, BackColor={btn.BackColor}, ForeColor={btn.ForeColor}, "
+                + $"FlatStyle={btn.FlatStyle}, BorderSize={btn.FlatAppearance.BorderSize}, BorderColor={btn.FlatAppearance.BorderColor}"
+        );
         return btn;
     }
 
-    public static TableLayoutPanel CreateTableLayoutPanel(int rows, int columns, int? height = null, Constants.RowStyling rowStyling = Constants.RowStyling.Default, Constants.ColumnStyling columnStyling = Constants.ColumnStyling.Default, List<RowStyle> customRowStyles = null, List<ColumnStyle> customColumnStyles = null)
+    public static TableLayoutPanel CreateTableLayoutPanel(
+        int rows,
+        int columns,
+        int? height = null,
+        Constants.RowStyling rowStyling = Constants.RowStyling.Default,
+        Constants.ColumnStyling columnStyling = Constants.ColumnStyling.Default,
+        List<RowStyle> customRowStyles = null,
+        List<ColumnStyle> customColumnStyles = null
+    )
     {
         var tableLayout = new TableLayoutPanel
         {
@@ -908,16 +1196,24 @@ public class UIComponentFactory
             AutoSize = true,
             Dock = DockStyle.Fill,
             Margin = margin ?? new Padding(5),
-            Font = font ?? new Font("Segoe UI", 10)
+            Font = font ?? new Font("Segoe UI", 10),
         };
-        CPHLogger.LogV($"GroupBox created. Properties: Text=\"{title}\", Margin={groupBox.Margin}, Font={groupBox.Font}");
+        CPHLogger.LogV(
+            $"GroupBox created. Properties: Text=\"{title}\", Margin={groupBox.Margin}, Font={groupBox.Font}"
+        );
         return groupBox;
     }
 
     /// <summary>
     /// Factory for creating and styling FlowLayoutPanel controls.
     /// </summary>
-    public static FlowLayoutPanel CreateFlowLayoutPanel(FlowDirection direction = FlowDirection.LeftToRight, bool wrapContents = true, bool autoSize = false, AnchorStyles anchor = AnchorStyles.Top | AnchorStyles.Left, Padding? margin = null)
+    public static FlowLayoutPanel CreateFlowLayoutPanel(
+        FlowDirection direction = FlowDirection.LeftToRight,
+        bool wrapContents = true,
+        bool autoSize = false,
+        AnchorStyles anchor = AnchorStyles.Top | AnchorStyles.Left,
+        Padding? margin = null
+    )
     {
         var flowPanel = new FlowLayoutPanel
         {
@@ -927,16 +1223,25 @@ public class UIComponentFactory
             Dock = DockStyle.Fill,
             Anchor = anchor,
             Margin = margin ?? new Padding(0),
-            Padding = margin ?? new Padding(0)
+            Padding = margin ?? new Padding(0),
         };
-        CPHLogger.LogV($"FlowLayoutPanel created: Direction={flowPanel.FlowDirection}, WrapContents={flowPanel.WrapContents}, AutoSize={flowPanel.AutoSize}");
+        CPHLogger.LogV(
+            $"FlowLayoutPanel created: Direction={flowPanel.FlowDirection}, WrapContents={flowPanel.WrapContents}, AutoSize={flowPanel.AutoSize}"
+        );
         return flowPanel;
     }
 
     /// <summary>
     /// Factory for creating and styling ListBox controls.
     /// </summary>
-    public static ListBox CreateListBox(int? widthParam = null, int? heightParam = null, bool multiSelect = false, bool sorted = false, bool iHeight = false, AnchorStyles anchor = AnchorStyles.Left | AnchorStyles.Right)
+    public static ListBox CreateListBox(
+        int? widthParam = null,
+        int? heightParam = null,
+        bool multiSelect = false,
+        bool sorted = false,
+        bool iHeight = false,
+        AnchorStyles anchor = AnchorStyles.Left | AnchorStyles.Right
+    )
     {
         // Create the ListBox instance
         var listBox = new ListBox
@@ -947,7 +1252,7 @@ public class UIComponentFactory
             Dock = DockStyle.Fill,
             Padding = new Padding(0),
             Margin = new Padding(0),
-            IntegralHeight = iHeight
+            IntegralHeight = iHeight,
         };
         // Set Width and Height only if specified (not null)
         if (widthParam.HasValue)
@@ -961,7 +1266,11 @@ public class UIComponentFactory
         }
 
         // Logging for debugging
-        CPHLogger.LogV($"ListBox created: Width={(widthParam.HasValue ? widthParam.Value.ToString() : "Auto")}, " + $"Height={(heightParam.HasValue ? heightParam.Value.ToString() : "Auto")}, " + $"MultiSelect={multiSelect}, Sorted={sorted}");
+        CPHLogger.LogV(
+            $"ListBox created: Width={(widthParam.HasValue ? widthParam.Value.ToString() : "Auto")}, "
+                + $"Height={(heightParam.HasValue ? heightParam.Value.ToString() : "Auto")}, "
+                + $"MultiSelect={multiSelect}, Sorted={sorted}"
+        );
         return listBox;
     }
 }
@@ -975,12 +1284,16 @@ public static class Constants
     public const string SettingsFileName = "settings.json";
     public const string FormName = "SBZen Config Manager";
     public static readonly Color FormColour = Color.WhiteSmoke;
-    public static readonly string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
+    public static readonly string DataDir = Path.Combine(
+        AppDomain.CurrentDomain.BaseDirectory,
+        "data"
+    );
+
     public enum StartupMode
     {
         Yes,
         No,
-        Prompt
+        Prompt,
     }
 
     public enum ButtonStyle
@@ -989,21 +1302,21 @@ public static class Constants
         Primary,
         Longer,
         ArrowBtn,
-        FlowControl
+        FlowControl,
     }
 
     public enum RowStyling
     {
         Default,
         Distributed,
-        Custom
+        Custom,
     }
 
     public enum ColumnStyling
     {
         Default,
         Distributed,
-        Custom
+        Custom,
     }
 }
 
@@ -1014,15 +1327,20 @@ public static class Constants
 public class CPHLogger : SB
 {
     public static void LogD(string message) => CPH.LogDebug($"[DEBUG] {message}");
+
     public static void LogE(string message) => CPH.LogError($"[ERROR] {message}");
+
     public static void LogI(string message) => CPH.LogInfo($"[INFO] {message}");
+
     public static void LogV(string message) => CPH.LogVerbose($"[VERBOSE] {message}");
+
     public static void LogW(string message) => CPH.LogWarn($"[WARN] {message}");
 }
 
 public static class LayoutLogger
 {
     private static int controlCounter = 0;
+
     public static void LogAll(Control control, string context = "General")
     {
         controlCounter = 0;
@@ -1043,9 +1361,12 @@ public static class LayoutLogger
     private static void LogControlHierarchy(Control control, int depth = 0)
     {
         string prefix = $"{depth + 1}.";
-        string indent = new string (' ', depth * 2);
+        string indent = new string(' ', depth * 2);
         controlCounter++;
-        string controlDetails = $"{indent}[{controlCounter}] {prefix}Control: {control.GetType().Name}, Name: {control.Name ?? "Unnamed"}, " + $"Size: {control.Width}x{control.Height}, Location: {control.Location}, Dock: {control.Dock}, Anchor: {control.Anchor}, " + $"AutoSize: {control.AutoSize}, Margin: {control.Margin}, Padding: {control.Padding}";
+        string controlDetails =
+            $"{indent}[{controlCounter}] {prefix}Control: {control.GetType().Name}, Name: {control.Name ?? "Unnamed"}, "
+            + $"Size: {control.Width}x{control.Height}, Location: {control.Location}, Dock: {control.Dock}, Anchor: {control.Anchor}, "
+            + $"AutoSize: {control.AutoSize}, Margin: {control.Margin}, Padding: {control.Padding}";
         CPHLogger.LogI(controlDetails);
         foreach (Control child in control.Controls)
         {
@@ -1058,18 +1379,24 @@ public static class LayoutLogger
         var start = DateTime.Now;
         action();
         var end = DateTime.Now;
-        CPHLogger.LogI($"[PERFORMANCE] {eventName} completed in {(end - start).TotalMilliseconds} ms");
+        CPHLogger.LogI(
+            $"[PERFORMANCE] {eventName} completed in {(end - start).TotalMilliseconds} ms"
+        );
     }
 
     private static void LogTableLayoutPanelDetails(TableLayoutPanel tableLayoutPanel)
     {
-        CPHLogger.LogI($"[TableLayoutPanel] {tableLayoutPanel.Name}, Rows: {tableLayoutPanel.RowCount}, Columns: {tableLayoutPanel.ColumnCount}");
+        CPHLogger.LogI(
+            $"[TableLayoutPanel] {tableLayoutPanel.Name}, Rows: {tableLayoutPanel.RowCount}, Columns: {tableLayoutPanel.ColumnCount}"
+        );
         for (int row = 0; row < tableLayoutPanel.RowCount; row++)
         {
             for (int col = 0; col < tableLayoutPanel.ColumnCount; col++)
             {
                 Control cellControl = tableLayoutPanel.GetControlFromPosition(col, row);
-                CPHLogger.LogI($"    [Row {row}, Col {col}] => {(cellControl != null ? cellControl.GetType().Name : "Empty")}");
+                CPHLogger.LogI(
+                    $"    [Row {row}, Col {col}] => {(cellControl != null ? cellControl.GetType().Name : "Empty")}"
+                );
             }
         }
     }
@@ -1082,20 +1409,26 @@ public static class LayoutLogger
         }
 
         var screen = Screen.FromControl(control);
-        CPHLogger.LogI($"[Screen] Bounds: {screen.Bounds}, Working Area: {screen.WorkingArea}, Control Bounds: {control.Bounds}");
+        CPHLogger.LogI(
+            $"[Screen] Bounds: {screen.Bounds}, Working Area: {screen.WorkingArea}, Control Bounds: {control.Bounds}"
+        );
     }
 
     private static void LogScrollableContent(Control control)
     {
         if (control is ScrollableControl scrollableControl)
         {
-            CPHLogger.LogI($"[ScrollableControl] {scrollableControl.Name}, Size: {scrollableControl.Width}x{scrollableControl.Height}");
+            CPHLogger.LogI(
+                $"[ScrollableControl] {scrollableControl.Name}, Size: {scrollableControl.Width}x{scrollableControl.Height}"
+            );
         }
     }
 
     private static void LogMarginPadding(Control control)
     {
-        CPHLogger.LogI($"[Margins & Padding] Control: {control.Name}, Margin: {control.Margin}, Padding: {control.Padding}");
+        CPHLogger.LogI(
+            $"[Margins & Padding] Control: {control.Name}, Margin: {control.Margin}, Padding: {control.Padding}"
+        );
     }
 }
 

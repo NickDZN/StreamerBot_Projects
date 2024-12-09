@@ -29,12 +29,12 @@ public class CPHInline
     {
         // Start Execution and create centralised SB instance. 
         CPH.LogDebug("SBSAM Loaded.");
-		SB.CPH = CPH;
-		SB.args = args;		
-		CPHLogger.LogDebug("Centralised CPH, enabling centralised methods.");
+        SB.CPH = CPH;
+        SB.args = args;
+        CPHLogger.LogD("Centralised CPH, enabling centralised methods.");
 
         // Attempt to get the handle of the currently active window
-        CPHLogger.LogDebug("Getting Window Details");
+        CPHLogger.LogD("Getting Window Details");
         IntPtr activeWindowHandle = GetForegroundWindow();
         CPHLogger.LogInfo($"activeWindowHandle is {activeWindowHandle}.");
 
@@ -104,8 +104,8 @@ public class CPHInline
 
 public class LoadStartupConfigForm : Form
 {
-     // Field to hold the CPH object
-	private IInlineInvokeProxy CPH;
+    // Field to hold the CPH object
+    private IInlineInvokeProxy CPH;
 
     // List of the actions available in streamerbot. 
     private List<ActionData> actionDataList;
@@ -115,7 +115,7 @@ public class LoadStartupConfigForm : Form
 
 
     //SB_SAM Startup Configuration Buttons.
-    private Label lblStartupConfigDelay = new Label(); 
+    private Label lblStartupConfigDelay = new Label();
     private RadioButton radioStartupConfigYes = new RadioButton();
     private RadioButton radioStartupConfigNo = new RadioButton();
     private RadioButton radioStartupConfigPrompt = new RadioButton();
@@ -124,18 +124,18 @@ public class LoadStartupConfigForm : Form
 
     // Application Start-up IO's.
     private ListBox lstApplications = new ListBox();
-    private Button btnAddApplication = new Button ();
+    private Button btnAddApplication = new Button();
     private Button btnAddApplicationPath = new Button();
-    private Button btnRemoveApplication = new Button(); 
+    private Button btnRemoveApplication = new Button();
 
-    private Button btnMoveUp = new Button(); 
-    private Button btnMoveDown = new Button(); 
+    private Button btnMoveUp = new Button();
+    private Button btnMoveDown = new Button();
 
     // Actions Startup Permitted IO's
     private ListBox lstActionsPermitted = new ListBox();
     private Button btnAddActionPermitted = new Button();
-    private Button btnRemoveActionPermitted = new Button(); 
-    
+    private Button btnRemoveActionPermitted = new Button();
+
 
     private ListBox lstActionsBlocked = new ListBox();
     private Button btnAddActionBlocked = new Button();
@@ -182,22 +182,23 @@ public class LoadStartupConfigForm : Form
     }
 
     // Method to create and add a tab with controls
-    private void AddTabWithControls(
-        TabControl tabControl,
-        string title,
-        Action<TabPage> addControls
-    )
+    private void AddTabWithControls(TabControl tabControl, string title, Action<TabPage> addControls)
     {
-        CPHLogger.LogDebug($"Creating tab page: {title}");
         var tabPage = CreateTabPage(title);
-        CPHLogger.LogDebug($"Adding tab controls: {title}");
-        addControls(tabPage); 
-        CPHLogger.LogDebug($"Adding tab page to form: {title}");
+        addControls(tabPage);
+
+        // Ensure tabPage takes up the full space and the controls within it are properly sized
+        tabPage.Dock = DockStyle.Fill;
+
         tabControl.TabPages.Add(tabPage);
     }
 
     private void InitialiseControls()
     {
+        // Apply consistent styling for other controls
+        CPHLogger.LogDebug("Calling: StyleForm");
+        StyleForm();
+
         // Apply consistent styling for other controls
         CPHLogger.LogDebug("Calling: StyleFormUserActionControls");
         StyleFormUserActionControls();
@@ -215,22 +216,29 @@ public class LoadStartupConfigForm : Form
         StyleFormFlowControls();
     }
 
+    private void StyleForm()
+    {
+        CPHLogger.LogDebug("Styling base level form elements..");
+    }
+
     private void StyleStartupConfigControls()
     {
         CPHLogger.LogDebug("Styling Start Up Config Controls.");
         UIStyling.StyleRadioButton(radioStartupConfigYes, "Yes");
         UIStyling.StyleRadioButton(radioStartupConfigNo, "No");
         UIStyling.StyleRadioButton(radioStartupConfigPrompt, "Prompt");
+        UIStyling.StyleNumberUpDown(numupdwnStartupConfigDelay);
     }
 
     // Generic method to apply styling to application-related controls
     private void StyleApplicationListControls()
     {
         CPHLogger.LogDebug("Styling Application List Controls.");
+        UIStyling.StyleLabel(lblStartupConfigDelay, "Delay (In Seconds)");
         UIStyling.StyleListBox(lstApplications);
         UIStyling.StyleBtn(btn: btnAddApplication, btnText: "Add Application", btnType: 2);
         UIStyling.StyleBtn(btn: btnRemoveApplication, btnText: "Remove Application", btnType: 2, btnEnabled: false);
-        UIStyling.StyleBtn(btn: btnAddApplicationPath, btnText: "Add Path", btnType: 2);        
+        UIStyling.StyleBtn(btn: btnAddApplicationPath, btnText: "Add Path", btnType: 2);
         UIStyling.StyleArrowBtn(btnMoveUp, btnArrow: "▲");
         UIStyling.StyleArrowBtn(btnMoveDown, btnArrow: "▼");
     }
@@ -286,14 +294,14 @@ public class LoadStartupConfigForm : Form
 
         this.MinimumSize = new Size(600, 600);
         CPHLogger.LogInfo($"Form MinimumSize Set. W:{this.Width} H:{this.Height}");
-        
-        CPHLogger.LogDebug("[BuildCoreForm] Setting base form styling.");        
+
+        CPHLogger.LogDebug("[BuildCoreForm] Setting base form styling.");
         this.BackColor = Color.WhiteSmoke;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-        
+
         CPHLogger.LogDebug("[BuildCoreForm] Calling CenterForm.");
-        CenterForm(activeWindowRect);       
+        CenterForm(activeWindowRect);
 
         CPHLogger.LogDebug("[BuildCoreForm] Creating new TabControl.");
         var tabControl = new TabControl();
@@ -321,77 +329,78 @@ public class LoadStartupConfigForm : Form
     // Helper method to create a new tab page with common padding
     private TabPage CreateTabPage(string title)
     {
-        CPHLogger.LogInfo($"[CreateTabPage][S] Creating new Tab Page for: {title}");
-        return new TabPage(title) { Padding = new Padding(2, 5, 2, 2) };
+        var tabPage = new TabPage(title)
+        {
+            Padding = new Padding(5) // Added padding for clarity
+        };
+
+        // Ensure the controls within the TabPage are properly aligned
+        tabPage.Controls.Add(new TableLayoutPanel()
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        });
+
+        return tabPage;
     }
 
     // General method to create a layout panel for any tab
-    private TableLayoutPanel CreateLayoutPanel(int columnCount = 1, int rowCount = 6)
+    private TableLayoutPanel CreateBaseLevelTablePanel(int rowCount = 6, int columnCount = 1)
     {
-        CPHLogger.LogInfo($"[TableLayoutPanel][S] Starting Base Tab Table Creation. Cols: {columnCount} Rows: {rowCount}");
-        var panel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            Padding = new Padding(2, 2, 2, 2),
-            Margin = new Padding(2, 2, 2, 2),
-            ColumnCount = columnCount,
-            RowCount = rowCount,
-            CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-        };
+        CPHLogger.LogInfo($"[TableLayoutPanel][S] CreateBaseLevelTablePanel. Cols: {columnCount} Rows: {rowCount}");
+        var BasePanelForTab = new TableLayoutPanel();
 
-        CPHLogger.LogDebug("[TableLayoutPanel] Returning Table Panel");
-        return panel;
+        CPHLogger.LogDebug("[TableLayoutPanel] BasePanelForTab created. Applying styling.");
+        UIStyling.StyleTableLayoutPanel(BasePanelForTab, rowCount: rowCount, columnCount: columnCount);
+
+        CPHLogger.LogVerbose("[TableLayoutPanel] Returning Table Panel");
+        return BasePanelForTab;
     }
 
     // Adding specific controls to the "Startup" tab
     private void AddStartupTabControls(TabPage startupTab)
     {
-        CPHLogger.LogDebug("[AddStartupTabControls][S] Starting AddStartupTabControls");
-        var scrollablePanel = new Panel
-        {
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoScroll = true,
-            BackColor = Color.WhiteSmoke,
-        };
+        CPHLogger.LogDebug("[AddStartupTabControls][S] Creating Tab base level scroll panel");
+        var baseScrollablePanelForTab = new Panel();
+
 
         CPHLogger.LogDebug("[AddStartupTabControls] Calling Create Layout Panel.");
-        var mainLayoutPanel = CreateLayoutPanel();
+        var coreLayoutPanelForTab = CreateBaseLevelTablePanel(rowCount: 6, columnCount: 1);
 
         // Add controls to the layout panel
         CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddConfigurationControls.");
-        AddConfigurationControls(mainLayoutPanel);
+        AddConfigurationControls(coreLayoutPanelForTab);
         CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddApplicationControls.");
-        AddApplicationControls(mainLayoutPanel);
+        AddApplicationControls(coreLayoutPanelForTab);
         CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddSeparateActionGroups.");
-        AddSeparateActionGroups(mainLayoutPanel);
+        AddSeparateActionGroups(coreLayoutPanelForTab);
         CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddStartupConfigurationControls.");
-        AddStartupConfigurationControls(mainLayoutPanel);
+        AddStartupConfigurationControls(coreLayoutPanelForTab);
         CPHLogger.LogVerbose("[AddStartupTabControls] Calling AddApplicationControlButtons.");
-        AddApplicationControlButtons(mainLayoutPanel);
+        AddApplicationControlButtons(coreLayoutPanelForTab);
 
         // Add the layout panel to the scrollable panel
-        CPHLogger.LogDebug($"[AddStartupTabControls] Adding Layout Panel to the Scrollable Panel. {mainLayoutPanel.Size}");
-        scrollablePanel.Controls.Add(mainLayoutPanel);
+        CPHLogger.LogDebug($"[AddStartupTabControls] Adding Layout Panel to the Scrollable Panel. {coreLayoutPanelForTab.Size}");
+        baseScrollablePanelForTab.Controls.Add(coreLayoutPanelForTab);
 
         // Dynamically calculate the minimum size for the scrollable panel
         //CPHLogger.LogDebug("[AddStartupTabControls] SetMinimumSizeBasedOnChildControls.");
-        //SetMinimumSizeBasedOnChildControls(mainLayoutPanel, scrollablePanel);
+        //SetMinimumSizeBasedOnChildControls(coreLayoutPanelForTab, baseScrollablePanelForTab);
 
         // Add the scrollable panel to the tab
-        CPHLogger.LogInfo($"[AddStartupTabControls] Adding the scrollable panel to the tab page. Size: {scrollablePanel.Size}");
-        startupTab.Controls.Add(scrollablePanel);
+        CPHLogger.LogInfo($"[AddStartupTabControls] Adding the scrollable panel to the tab page. Size: {baseScrollablePanelForTab.Size}");
+        startupTab.Controls.Add(baseScrollablePanelForTab);
 
-        mainLayoutPanel.PerformLayout();
-        scrollablePanel.PerformLayout();
+        coreLayoutPanelForTab.PerformLayout();
+        baseScrollablePanelForTab.PerformLayout();
 
         // Log the layout panel height after forcing layout
-        CPHLogger.LogInfo($"[AddStartupTabControls] Main Layout Panel Height (After Layout): {mainLayoutPanel.Height}");
-        CPHLogger.LogInfo($"[AddStartupTabControls] Scrollable Panel Height (After Layout): {scrollablePanel.Height}");
-        
+        CPHLogger.LogInfo($"[AddStartupTabControls] Main Layout Panel Height (After Layout): {coreLayoutPanelForTab.Height}");
+        CPHLogger.LogInfo($"[AddStartupTabControls] Scrollable Panel Height (After Layout): {baseScrollablePanelForTab.Height}");
+
         // Add the scrollable panel to the tab
-        startupTab.Controls.Add(scrollablePanel);
+        startupTab.Controls.Add(baseScrollablePanelForTab);
+        UIStyling.StylePanel(baseScrollablePanelForTab);
 
         // Log the height of the tab page containing the layout panel
         CPHLogger.LogInfo($"[AddStartupTabControls] Tab Height (After Layout): {startupTab.Height}");
@@ -401,10 +410,7 @@ public class LoadStartupConfigForm : Form
         if (tabControl != null)
         {
             CPHLogger.LogInfo($"[AddStartupTabControls] TabControl Height (After Layout): {tabControl.Height}");
-        }        
-
-
-
+        }
     }
 
 
@@ -414,7 +420,7 @@ public class LoadStartupConfigForm : Form
     **
     **
     */
-    private void AddConfigurationControls(TableLayoutPanel mainLayoutPanel)
+    private void AddConfigurationControls(TableLayoutPanel coreLayoutPanelForTab)
     {
         // Create the group box.
         GroupBox configurationGroupBox = new GroupBox();
@@ -434,10 +440,8 @@ public class LoadStartupConfigForm : Form
         UIStyling.StyleTableLayoutPanel(
             buttonTable,
             columnCount: numberOfCols,
-            rowCount: 1,
             customRowStyles: rowStyling,
-            customColumnStyles: columnStyling,
-            autoSizeTable: true
+            customColumnStyles: columnStyling
         );
 
         // Add buttons to the TableLayoutPanel
@@ -472,15 +476,15 @@ public class LoadStartupConfigForm : Form
         configurationGroupBox.Controls.Add(buttonTable);
 
         // Add the GroupBox to the main layout
-        mainLayoutPanel.Controls.Add(configurationGroupBox);
+        coreLayoutPanelForTab.Controls.Add(configurationGroupBox);
     }
 
     // Flow control. Save and exit buttons.
     //ToDo: Centralise buttons to the bottom.
-    private void AddApplicationControlButtons(TableLayoutPanel mainLayoutPanel)
+    private void AddApplicationControlButtons(TableLayoutPanel coreLayoutPanelForTab)
     {
         FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
-        UIStyling.StyleFlowBox(buttonPanel, FlowDirection.LeftToRight, autoWrap: true);
+        UIStyling.StyleFlowBox(flowBox: buttonPanel);
 
         // Center-align the content within the FlowLayoutPanel
         buttonPanel.Anchor = AnchorStyles.None;
@@ -496,10 +500,10 @@ public class LoadStartupConfigForm : Form
         btnCloseForm.Click += MainCanvasCloseButton_Click;
 
         // Add the button panel to the main layout panel
-        mainLayoutPanel.Controls.Add(buttonPanel);
+        coreLayoutPanelForTab.Controls.Add(buttonPanel);
     }
 
-    private void AddApplicationControls(TableLayoutPanel mainLayoutPanel)
+    private void AddApplicationControls(TableLayoutPanel coreLayoutPanelForTab)
     {
         // Create the Applications group box.
         GroupBox applicationsToStartGroupBox = new GroupBox();
@@ -510,7 +514,7 @@ public class LoadStartupConfigForm : Form
 
         var rowStyling = new List<RowStyle>
         {
-            new RowStyle(SizeType.Percent, 100),
+            new RowStyle(SizeType.AutoSize),
             new RowStyle(SizeType.AutoSize),
         };
 
@@ -522,11 +526,9 @@ public class LoadStartupConfigForm : Form
 
         UIStyling.StyleTableLayoutPanel(
             tpanelApplications,
-            columnCount: 2,
             rowCount: 2,
             customRowStyles: rowStyling,
-            customColumnStyles: columnStyling,
-            autoSizeTable: true
+            customColumnStyles: columnStyling
         );
 
         // Add list box
@@ -534,10 +536,8 @@ public class LoadStartupConfigForm : Form
 
         // Create panel for Add/Remove buttons
         FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
-        UIStyling.StyleFlowBox(
-            buttonPanel,
-            FlowDirection.TopDown,
-            autoWrap: true,
+        UIStyling.StyleFlowBox(flowBox: buttonPanel,
+            fBoxDirection: FlowDirection.TopDown,
             anchorStyle: AnchorStyles.Top
         );
 
@@ -550,10 +550,7 @@ public class LoadStartupConfigForm : Form
 
         // Add arrow buttons
         FlowLayoutPanel fpanelApplicationArrows = new FlowLayoutPanel();
-        UIStyling.StyleFlowBox(
-            fpanelApplicationArrows,
-            FlowDirection.LeftToRight,
-            autoWrap: true,
+        UIStyling.StyleFlowBox(flowBox: fpanelApplicationArrows,
             customPadding: new Padding(1, 1, 5, 1),
             anchorStyle: AnchorStyles.Right
         );
@@ -563,7 +560,6 @@ public class LoadStartupConfigForm : Form
         fpanelApplicationArrows.Controls.Add(btnMoveDown);
 
         // Add arrowButtonsPanel below the ListBox, centered
-        tpanelApplications.Controls.Add(fpanelApplicationArrows, 0, 1);
 
         // Attach event handlers.
         lstApplications.SelectedIndexChanged += ApplicationListBox_SelectedIndexChanged;
@@ -575,10 +571,10 @@ public class LoadStartupConfigForm : Form
 
         applicationsToStartGroupBox.Controls.Add(tpanelApplications);
 
-        mainLayoutPanel.Controls.Add(applicationsToStartGroupBox);
+        coreLayoutPanelForTab.Controls.Add(applicationsToStartGroupBox);
     }
 
-    private void AddSeparateActionGroups(TableLayoutPanel mainLayoutPanel)
+    private void AddSeparateActionGroups(TableLayoutPanel coreLayoutPanelForTab)
     {
         // Create a GroupBox for "Allowed Actions"
         GroupBox allowedActionsGroupBox = CreateActionsGroupBox(
@@ -603,8 +599,8 @@ public class LoadStartupConfigForm : Form
         );
 
         // Add both GroupBoxes to the main layout
-        mainLayoutPanel.Controls.Add(allowedActionsGroupBox);
-        mainLayoutPanel.Controls.Add(blockedActionsGroupBox);
+        coreLayoutPanelForTab.Controls.Add(allowedActionsGroupBox);
+        coreLayoutPanelForTab.Controls.Add(blockedActionsGroupBox);
     }
 
     private GroupBox CreateActionsGroupBox(
@@ -631,11 +627,8 @@ public class LoadStartupConfigForm : Form
 
         UIStyling.StyleTableLayoutPanel(
             actionsPanel,
-            columnCount: 2,
-            rowCount: 1,
             customRowStyles: rowStyling,
-            customColumnStyles: columnStyling,
-            autoSizeTable: true
+            customColumnStyles: columnStyling
         );
 
         // Add ListBox to the panel
@@ -670,16 +663,15 @@ public class LoadStartupConfigForm : Form
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
-        FormResizer.ResizeFormToFitContent(this);
+        //FormResizer.ResizeFormToFitContent(this);
     }
 
-    private void AddStartupConfigurationControls(TableLayoutPanel mainLayoutPanel)
+    private void AddStartupConfigurationControls(TableLayoutPanel coreLayoutPanelForTab)
     {
         GroupBox startupOptionsGroup = new GroupBox();
         UIStyling.StyleGroupBox(startupOptionsGroup, "Load Applications on Startup", 60);
 
         TableLayoutPanel startupOptionsPanel = new TableLayoutPanel();
-        var rowStyling = new List<RowStyle> { new RowStyle(SizeType.AutoSize) };
         var columnStyling = new List<ColumnStyle>
         {
             new ColumnStyle(SizeType.Absolute, 55),
@@ -693,10 +685,7 @@ public class LoadStartupConfigForm : Form
         UIStyling.StyleTableLayoutPanel(
             startupOptionsPanel,
             columnCount: 6,
-            rowCount: 1,
-            customRowStyles: rowStyling,
-            customColumnStyles: columnStyling,
-            autoSizeTable: true
+            customColumnStyles: columnStyling
         );
 
         // Styled radio buttons
@@ -704,13 +693,9 @@ public class LoadStartupConfigForm : Form
         radioStartupConfigNo.Font = new Font("Segoe UI", 9);
         radioStartupConfigPrompt.Font = new Font("Segoe UI", 9);
 
-		
-		UIStyling.StyleLabel(lblStartupConfigDelay, "Delay (In Seconds)");
-
         // Styled delay controls
         lblStartupConfigDelay.ForeColor = Color.DimGray;
         numupdwnStartupConfigDelay.BackColor = Color.White;
-        UIStyling.StyleNumberUpDown(numupdwnStartupConfigDelay); 
 
 
         // Add controls to the layout panel
@@ -721,8 +706,11 @@ public class LoadStartupConfigForm : Form
         startupOptionsPanel.Controls.Add(numupdwnStartupConfigDelay, 5, 0);
 
         startupOptionsGroup.Controls.Add(startupOptionsPanel);
-        mainLayoutPanel.Controls.Add(startupOptionsGroup);
+        coreLayoutPanelForTab.Controls.Add(startupOptionsGroup);
     }
+
+
+
 
     private void AddApplication_Click(object sender, EventArgs e)
     {
@@ -1479,18 +1467,18 @@ public static class UIStyling
         label.Text = labelText;
         label.AutoSize = true;
         label.Dock = DockStyle.Fill;
-        label.TextAlign = ContentAlignment.MiddleLeft;           
-    }    
+        label.TextAlign = ContentAlignment.MiddleLeft;
+    }
 
 
     // Style for primary/main buttons
-    public static void StyleBtn(Button btn, string btnText, int btnType = 1, bool btnEnabled = true, 
+    public static void StyleBtn(Button btn, string btnText, int btnType = 1, bool btnEnabled = true,
                         Padding? btnMargin = null, Padding? btnPadding = null)
     {
         // Set button properties
-        btn.Text = btnText;         
+        btn.Text = btnText;
         btn.Height = 24;
-        btn.Enabled = btnEnabled; 
+        btn.Enabled = btnEnabled;
 
         // Set common button styles
         btn.Font = new Font("Microsoft Sans Serif", 8.5f);
@@ -1553,21 +1541,32 @@ public static class UIStyling
         listBox.Margin = new Padding(5, 5, 5, 0);
     }
 
+    public static void StylePanel(Panel panel, Padding? panelPadding = null)
+    {
+        panel.Dock = DockStyle.Fill;
+        panel.AutoSize = true;
+        panel.AutoScroll = true;
+        panel.Padding = panelPadding ?? new Padding(0);
+        panel.BackColor = Color.WhiteSmoke;
+        panel.BackColor = Color.WhiteSmoke;
+        panel.BorderStyle = BorderStyle.FixedSingle;
+    }
+
+
     public static void StyleFlowBox(
         FlowLayoutPanel flowBox,
-        FlowDirection direction = FlowDirection.TopDown,
-        bool autoWrap = false,
+        FlowDirection fBoxDirection = FlowDirection.LeftToRight, // Default to LeftToRight
+        bool autoWrap = true,
         Padding? customPadding = null, // Allow optional padding
-        AnchorStyles anchorStyle =
-            AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom // Default anchor
+        AnchorStyles anchorStyle = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom // Default anchor
     )
     {
-        flowBox.FlowDirection = direction; // Set the flow direction
+        flowBox.FlowDirection = fBoxDirection; // Assign the FlowDirection enum value directly
         flowBox.WrapContents = autoWrap; // Enable or disable wrapping
         flowBox.Anchor = anchorStyle; // Apply anchor styles
         flowBox.AutoSize = true; // Automatically resize based on contents
         flowBox.AutoSizeMode = AutoSizeMode.GrowAndShrink; // Allow resizing as content grows or shrinks
-        flowBox.Padding = new Padding(0); // Default margin
+        flowBox.Padding = customPadding ?? new Padding(0); // Default margin
 
         // Use custom padding if provided, otherwise default to no padding
         flowBox.Margin = customPadding ?? new Padding(0);
@@ -1598,11 +1597,11 @@ public static class UIStyling
 
     public static void StyleTableLayoutPanel(
         TableLayoutPanel tableLayoutPanel,
-        int columnCount,
-        int rowCount,
+        int columnCount = 2,
+        int rowCount = 1,
         List<RowStyle> customRowStyles = null,
         List<ColumnStyle> customColumnStyles = null,
-        bool autoSizeTable = false
+        bool autoSizeTable = true
     )
     {
         // Set common properties
@@ -1654,29 +1653,40 @@ public static class UIStyling
             groupBox.Text = text;
     }
 
-    public static void StyleTabControl(TabControl tabControl)
-    {
-        tabControl.Dock = DockStyle.Fill;
-        tabControl.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-        tabControl.Padding = new Point(0, 0);
-        tabControl.Appearance = TabAppearance.FlatButtons; // Set tabs to flat style
-        tabControl.ItemSize = new Size(120, 20); // Custom size for each tab
-        tabControl.DrawMode = TabDrawMode.OwnerDrawFixed; // Enable custom drawing
-        tabControl.DrawItem += (s, e) => // Define custom drawing behavior
-        {
-            // Fill tab background with custom color
-            e.Graphics.FillRectangle(new SolidBrush(Color.WhiteSmoke), e.Bounds);
+public static void StyleTabControl(TabControl tabControl)
+{
+    // Set the general properties for the TabControl
+    tabControl.Dock = DockStyle.Fill; // Make the TabControl fill the parent container
+    tabControl.Font = new Font("Segoe UI", 10, FontStyle.Regular); // Set the font of the tabs
 
-            // Draw the tab text with custom color
-            TextRenderer.DrawText(
-                e.Graphics,
-                tabControl.TabPages[e.Index].Text,
-                e.Font,
-                e.Bounds,
-                Color.Black
-            );
-        };
+    // Enable auto-sizing for the TabControl
+    tabControl.AutoSize = true;
+    //tabControl.AutoSizeMode = AutoSizeMode.GrowAndShrink; // TabControl will resize based on its contents
+
+    // Set the TabSizeMode to control how the tabs are sized
+    tabControl.SizeMode = TabSizeMode.FillToRight; // Tab pages fill the width, maintaining consistent appearance
+
+    // Set custom height for the tabs (e.g., 40px) while allowing width to adjust dynamically
+    tabControl.ItemSize = new Size(100, 40); // ItemSize controls both width and height of tabs (e.g., 100px width, 40px height)
+    
+    // Optionally, handle custom tab drawing if needed for more customization (e.g., custom background, borders, etc.)
+    tabControl.DrawMode = TabDrawMode.OwnerDrawFixed; // Enable custom drawing
+
+    // Make sure the control has the proper flow and scroll handling:
+    foreach (TabPage tabPage in tabControl.TabPages)
+    {
+        // Ensure each tab page inside the TabControl is appropriately resized with its contents
+        tabPage.AutoScroll = true;  // Enable auto-scrolling if content overflows
+
+        // Optional: Customize the layout and resizing behavior of any controls within the tab page
+        foreach (Control control in tabPage.Controls)
+        {
+            control.Dock = DockStyle.Fill; // Ensure controls within the tab fill the available space
+            // Additional control-specific styling can be added here if needed
+        }
     }
+}
+
 }
 
 public static class FormResizer

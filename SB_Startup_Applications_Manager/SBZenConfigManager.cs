@@ -1,128 +1,239 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel; // For TypeDescriptor and EventDescriptor
-using System.Drawing;
+using System.Diagnostics; // For process management
+using System.Drawing; // For graphical structures like Rectangle
 using System.IO;
-using System.Linq;
+using System.Linq; // For LINQ queries
 using System.Reflection; // For BindingFlags
-using System.Runtime.InteropServices;
+using System.Runtime.InteropServices; // For importing DLL methods
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Windows.Forms;
+using System.Threading; // For managing threads
+using System.Windows.Forms; // For creating Windows Forms
 
 public class CPHInline
 {
-    // Importing user32.dll to use necessary methods
+    // Importing user32.dll to retrieve the handle of the foreground window
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
     private static LoadStartupConfigForm mainFormInstance = null;
 
+    // Importing user32.dll to get the title of a window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
+    // Importing user32.dll to get the rectangle of a window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
 
+    // Main method that executes the logic for setting up and displaying the form
     public bool Execute()
     {
-        // Start Execution and create centralised SB instance.
-        CPH.LogDebug("SBSAM Loaded.");
-        SB.CPH = CPH;
-        SB.args = args;
-        
-        // Attempt to get the handle of the currently active window
-        CPHLogger.LogV("[FORM INIT] Get Foreground Window.");
-        IntPtr activeWindowHandle = GetForegroundWindow();
-        if (activeWindowHandle == IntPtr.Zero)
+        // Step 1: Set up a static reference for CPH and arguments
+        try
         {
-            CPHLogger.LogE("No active window found.");
+            CPH.LogDebug("SBSAM Loaded.");
+            SB.CPH = CPH;
+            SB.args = args;
+        }
+        catch (Exception ex)
+        {
+            // Log errors if the setup fails
+            CPHLogger.LogE($"Unable to create static CPH reference: {ex.Message}\n{ex.StackTrace}");
             return false;
         }
 
-        // Get the window details of the main Streamer.bot instance which this is loaded from.
-        StringBuilder windowTitle = new StringBuilder(256);
-        GetWindowText(activeWindowHandle, windowTitle, windowTitle.Capacity);
-        CPHLogger.LogI($"Window Details: Active Window Handle is {activeWindowHandle}. WindowTitle is {windowTitle}. "
-                     + $"Window Capacity is: {windowTitle.Capacity}"
-        );
-        // Get the dimensions of the active window
-        if (!GetWindowRect(activeWindowHandle, out Rectangle activeWindowRect))
+        // Step 2: Retrieve window details and open the form
+        try
         {
-            CPHLogger.LogE("Failed to get window dimensions.");
-            return false;
-        }
+            CPHLogger.LogV("Attempting to get process details");
 
-        CPHLogger.LogI(
-            $"Active Window Rect Details: "
-                + $"Size: {activeWindowRect.Size}. Height: {activeWindowRect.Height}. Width: {activeWindowRect.Width} "
-                + $"Raw Rectangle Values: Left={activeWindowRect.Left}, Top={activeWindowRect.Top}, Right={activeWindowRect.Right}, Bottom={activeWindowRect.Bottom}"
-        );
-        // Validate and fix dimensions if required
-        if (activeWindowRect.Top > activeWindowRect.Bottom || activeWindowRect.Height < 0)
-        {
-            activeWindowRect.Height = Math.Abs(activeWindowRect.Bottom - activeWindowRect.Top);
-            CPHLogger.LogW(
-                $"Negative height detected. Corrected Height: {activeWindowRect.Height}"
-            );
-        }
+            // Retrieve the current process, representing Streamer.bot
+            Process currentProcess = Process.GetCurrentProcess();
+            LayoutLogger.logProcessDetails(currentProcess);
 
-        if (activeWindowRect.Left > activeWindowRect.Right || activeWindowRect.Width < 0)
-        {
-            activeWindowRect.Width = Math.Abs(activeWindowRect.Right - activeWindowRect.Left);
-            CPHLogger.LogW($"Negative width detected. Corrected Width: {activeWindowRect.Width}");
-        }
-
-        // Get the screen details of the active window
-        var screen = Screen.FromHandle(activeWindowHandle);
-        CPHLogger.LogI($"Screen Bounds: {screen.Bounds}. Working Area: {screen.WorkingArea}");
-        // Calculate DPI scaling factor
-        float dpiScalingFactor = Graphics.FromHwnd(activeWindowHandle).DpiX / 96.0f;
-        CPHLogger.LogI($"DPI Scaling Factor: {dpiScalingFactor}x");
-        // Adjust window placement if necessary
-        int adjustedLeft = Math.Max(screen.WorkingArea.Left, activeWindowRect.Left);
-        int adjustedTop = Math.Max(screen.WorkingArea.Top, activeWindowRect.Top);
-        CPHLogger.LogI($"Adjusted Window Position: Left={adjustedLeft}, Top={adjustedTop}");
-        // Start new thread for the form
-        CPHLogger.LogD("Starting main form thread.");
-        Thread staThread = new Thread(() =>
-        {
-            try
+            // Verify that the main window handle of the process is valid
+            if (currentProcess.MainWindowHandle == IntPtr.Zero)
             {
-                CPHLogger.LogD("Enabling application visual styles.");
-                Application.EnableVisualStyles();
-                CPHLogger.LogD("Populating list of actions.");
-                List<ActionData> actionList = CPH.GetActions();
-                CPHLogger.LogD("Open Form.");
-                if (mainFormInstance == null || mainFormInstance.IsDisposed)
-                {
-                    CPHLogger.LogD("Loading a new form.");
-                    mainFormInstance = new LoadStartupConfigForm(activeWindowRect, actionList);
-                    Application.ThreadException += (sender, args) =>
+                CPHLogger.LogE("Main window handle is invalid. Streamer.bot is either not running, or running headlessly.");
+                return false;
+            }
+
+            // Retrieve the rectangle of the main window
+            if (!GetWindowRect(currentProcess.MainWindowHandle, out Rectangle windowRect))
+            {
+                CPHLogger.LogE("Failed to retrieve the window rectangle.");
+                return false;
+            }
+
+            // Validate the rectangle to ensure proper dimensions
+            windowRect = ValidateRectangle(windowRect);
+
+            // Log the dimensions of the Streamer.bot window
+            CPHLogger.LogI($"Streamer.bot Window Rect: {windowRect}");
+            LayoutLogger.logRectDetails(windowRect);
+
+            // Step 3: Determine the monitor where the window resides
+            var monitors = Screen.AllScreens; // Get all monitors connected to the system
+            LayoutLogger.logMonitorDetails(monitors);
+
+            Screen targetMonitor;
+
+            if (monitors.Length == 1)
+            {
+                // If only one monitor exists, no calculations are needed
+                targetMonitor = monitors[0];
+                CPHLogger.LogI("Single monitor detected. Skipping multi-monitor calculations.");
+            }
+            else
+            {
+                // Find the monitor with the largest overlap with the window
+                targetMonitor = monitors
+                    .Select(screen => new
                     {
-                        CPHLogger.LogE(
-                            $"Unhandled exception in STA thread: {args.Exception.Message}\n{args.Exception.StackTrace}"
-                        );
-                    };
-                    Application.Run(mainFormInstance);
+                        Screen = screen,
+                        Overlap = GetOverlapArea(windowRect, screen.Bounds)
+                    })
+                    .OrderByDescending(x => x.Overlap)
+                    .FirstOrDefault()?.Screen;
+
+                if (targetMonitor == null)
+                {
+                    CPHLogger.LogE("Failed to identify a valid monitor for placement.");
+                    return false;
+                }
+
+                if (targetMonitor.Bounds.Contains(windowRect))
+                {
+                    CPHLogger.LogI("Streamer.bot fully contained in target monitor.");
                 }
                 else
                 {
-                    CPHLogger.LogD("Bringing current form to front.");
-                    mainFormInstance.BringToFront();
+                    CPHLogger.LogW("Streamer.bot spans multiple monitors, selecting best-fit monitor.");
                 }
             }
-            catch (Exception ex)
+
+            // Log the details of the selected monitor
+            CPHLogger.LogI($"Target Monitor: {targetMonitor.DeviceName}, Bounds: {targetMonitor.Bounds}");
+
+            // Normalize the window rectangle coordinates to the selected monitor
+            Rectangle normalizedWindowRect = NormalizeToMonitor(windowRect, targetMonitor);
+
+            // Step 4: Start a new thread to open the form
+            CPHLogger.LogD("Starting main form thread.");
+            Thread staThread = new Thread(() =>
             {
-                CPHLogger.LogE($"Unhandled exception in STA thread: {ex.Message}\n{ex.StackTrace}");
-            }
-        });
-        staThread.SetApartmentState(ApartmentState.STA);
-        staThread.Start();
-        return true;
+                try
+                {
+                    CPHLogger.LogD("Enabling application visual styles.");
+                    Application.EnableVisualStyles();
+
+                    // Retrieve the list of actions from Streamer.bot
+                    CPHLogger.LogD("Populating list of actions.");
+                    List<ActionData> actionList = CPH.GetActions();
+
+                    CPHLogger.LogD("Open Form.");
+                    if (mainFormInstance == null || mainFormInstance.IsDisposed)
+                    {
+                        // Create a new instance of the form if it doesn't already exist
+                        CPHLogger.LogD("Loading a new form.");
+                        mainFormInstance = new LoadStartupConfigForm(normalizedWindowRect, actionList);
+
+                        // Apply normalized position
+                        CPHLogger.LogI($"Applying normalized rectangle: {normalizedWindowRect}");
+                        mainFormInstance.StartPosition = FormStartPosition.Manual;
+                        mainFormInstance.Location = new Point(normalizedWindowRect.X, normalizedWindowRect.Y);
+
+                        // Handle unhandled exceptions in the STA thread
+                        Application.ThreadException += (sender, args) =>
+                        {
+                            CPHLogger.LogE(
+                                $"Unhandled exception in STA thread: {args.Exception.Message}\n{args.Exception.StackTrace}"
+                            );
+                        };
+
+                        // Run the form
+                        Application.Run(mainFormInstance);
+                    }
+                    else
+                    {
+                        // Bring the existing form to the front
+                        CPHLogger.LogD("Bringing current form to front.");
+                        mainFormInstance.BringToFront();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log any exceptions that occur
+                    CPHLogger.LogE($"Unhandled exception in STA thread: {ex.Message}\n{ex.StackTrace}");
+                }
+            });
+
+            // Set the thread apartment state to STA and start it
+            staThread.SetApartmentState(ApartmentState.STA);
+            staThread.Start();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Log any errors that occur during execution
+            CPHLogger.LogE($"An error occurred during execution: {ex.Message}\n{ex.StackTrace}");
+            return false;
+        }
+    }
+
+    // Helper method to validate and correct rectangle dimensions
+    private Rectangle ValidateRectangle(Rectangle rect)
+    {
+        return new Rectangle(
+            rect.X,
+            rect.Y,
+            Math.Abs(rect.Width),
+            Math.Abs(rect.Height)
+        );
+    }
+
+    // Helper method to calculate the overlap area between a window and a monitor
+    private int GetOverlapArea(Rectangle windowRect, Rectangle monitorBounds)
+    {
+        windowRect = ValidateRectangle(windowRect);
+        var intersection = Rectangle.Intersect(windowRect, monitorBounds);
+
+        CPHLogger.LogD($"Calculating overlap: Window Rect={windowRect}, Monitor Bounds={monitorBounds}");
+        CPHLogger.LogD($"Intersection: {intersection}");
+
+        int overlapArea = intersection.IsEmpty ? 0 : intersection.Width * intersection.Height;
+        CPHLogger.LogD($"Calculated Overlap Area: {overlapArea}");
+        return overlapArea;
+    }
+
+    // Helper method to normalize the window rectangle to the bounds of a monitor
+    private Rectangle NormalizeToMonitor(Rectangle windowRect, Screen monitor)
+    {
+        var monitorBounds = monitor.Bounds;
+
+        // Log initial values for debugging
+        CPHLogger.LogD($"Initial Window Rect: {windowRect}");
+        CPHLogger.LogD($"Monitor Bounds: {monitorBounds}");
+
+        // Adjust coordinates to align with the monitor's bounds
+        Rectangle normalizedRect = new Rectangle(
+            windowRect.Left - monitorBounds.Left,
+            windowRect.Top - monitorBounds.Top,
+            windowRect.Width,
+            windowRect.Height
+        );
+
+        // Log the normalized rectangle for debugging
+        CPHLogger.LogD($"Normalized Window Rect: {normalizedRect}");
+        return normalizedRect;
     }
 }
+
+
+
 
 /// <summary>
 ///
@@ -157,6 +268,9 @@ public class LoadStartupConfigForm : Form
         this.SuspendLayout();
         this.ResumeLayout();
         LayoutLogger.LogAll(this);
+
+        LayoutLogger.logRectDetails(activeWindowRect);
+
     }
 
     private void SetFormProps(Form form)
@@ -1337,6 +1451,7 @@ public class CPHLogger : SB
     public static void LogW(string message) => CPH.LogWarn($"[WARN] {message}");
 }
 
+
 public static class LayoutLogger
 {
     private static int controlCounter = 0;
@@ -1345,7 +1460,7 @@ public static class LayoutLogger
     {
         controlCounter = 0;
         CPHLogger.LogI($"[LAYOUT] ===== BEGIN LAYOUT DEBUG LOG [{context}] =====");
-        LogControlHierarchy(control);
+        //LogControlHierarchy(control);
         LogDpiAndBounds(control);
         foreach (Control child in control.Controls)
         {
@@ -1358,21 +1473,82 @@ public static class LayoutLogger
         CPHLogger.LogI($"[LAYOUT] ===== END LAYOUT DEBUG LOG [{context}] =====");
     }
 
-    private static void LogControlHierarchy(Control control, int depth = 0)
+    public static void logProcessDetails(Process currentProcess)
     {
-        string prefix = $"{depth + 1}.";
-        string indent = new string(' ', depth * 2);
-        controlCounter++;
-        string controlDetails =
-            $"{indent}[{controlCounter}] {prefix}Control: {control.GetType().Name}, Name: {control.Name ?? "Unnamed"}, "
-            + $"Size: {control.Width}x{control.Height}, Location: {control.Location}, Dock: {control.Dock}, Anchor: {control.Anchor}, "
-            + $"AutoSize: {control.AutoSize}, Margin: {control.Margin}, Padding: {control.Padding}";
-        CPHLogger.LogI(controlDetails);
-        foreach (Control child in control.Controls)
+        if (currentProcess == null)
         {
-            LogControlHierarchy(child, depth + 1);
+            CPHLogger.LogE("Process object is null. Unable to log process details.");
+            return;
+        }
+
+        try
+        {
+            CPHLogger.LogI("=== Process Details ===");
+            CPHLogger.LogI($"Process ID: {currentProcess.Id}");
+            CPHLogger.LogI($"Process Name: {currentProcess.ProcessName}");
+            CPHLogger.LogI($"Main Window Handle: {currentProcess.MainWindowHandle}");
+            CPHLogger.LogI($"Main Window Title: {currentProcess.MainWindowTitle}");
+            CPHLogger.LogI($"Start Time: {currentProcess.StartTime}");
+            CPHLogger.LogI($"Responding: {currentProcess.Responding}");
+            CPHLogger.LogI($"Memory Usage: {currentProcess.WorkingSet64 / 1024 / 1024} MB");
+            CPHLogger.LogI($"Total Processor Time: {currentProcess.TotalProcessorTime}");
+            CPHLogger.LogI("=======================");
+        }
+        catch (Exception ex)
+        {
+            CPHLogger.LogE($"An error occurred while logging process details: {ex.Message}\n{ex.StackTrace}");
         }
     }
+
+    public static void logRectDetails(Rectangle rect)
+    {
+        try
+        {
+            CPHLogger.LogI("=== Active Window Details ===");
+            CPHLogger.LogI($"Left Pos: {rect.Left}");
+            CPHLogger.LogI($"Top Pos: {rect.Top}");
+            CPHLogger.LogI($"Right Pos: {rect.Right}");
+            CPHLogger.LogI($"Bottom Pos: {rect.Bottom}");
+            CPHLogger.LogI($"Height: {rect.Height}");
+            CPHLogger.LogI($"Width: {rect.Width}");
+            CPHLogger.LogI($"Location: {rect.Location}");
+            CPHLogger.LogI($"Size: {rect.Size}");
+            CPHLogger.LogI($"IsEmpty: {rect.IsEmpty}");
+            CPHLogger.LogI($"ToString: {rect.ToString()}");
+            CPHLogger.LogI("=======================");
+        }
+        catch (Exception ex)
+        {
+            CPHLogger.LogE($"An error occurred while logging process details: {ex.Message}\n{ex.StackTrace}");
+        }
+
+    }
+
+    public static void logMonitorDetails(Screen[] monitors)
+    {
+        if (monitors == null || monitors.Length == 0)
+        {
+            CPHLogger.LogE("No monitors detected.");
+            return;
+        }
+
+        CPHLogger.LogI("=== Monitor Details ===");
+        foreach (var monitor in monitors)
+        {
+            CPHLogger.LogI($"Monitor: {monitor.DeviceName}");
+            CPHLogger.LogI($"  Bounds: {monitor.Bounds}");
+            CPHLogger.LogI($"    X: {monitor.Bounds.X}, Y: {monitor.Bounds.Y}, Width: {monitor.Bounds.Width}, Height: {monitor.Bounds.Height}");
+            CPHLogger.LogI($"  Working Area: {monitor.WorkingArea}");
+            CPHLogger.LogI($"    X: {monitor.WorkingArea.X}, Y: {monitor.WorkingArea.Y}, Width: {monitor.WorkingArea.Width}, Height: {monitor.WorkingArea.Height}");
+            CPHLogger.LogI($"  Primary Monitor: {monitor.Primary}");
+        }
+        CPHLogger.LogI("=======================");
+    }
+
+
+
+
+
 
     private static void LogPerformanceMetrics(string eventName, Action action)
     {

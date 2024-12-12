@@ -853,8 +853,8 @@ public class UIComponentFactory
             AutoSize = false,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Microsoft Sans Serif", 8.5f),
-            BackColor = Color.White,
-            ForeColor = SystemColors.ControlText,
+            BackColor = Constants.PrimaryBtnBG,
+            ForeColor = Constants.PrimaryBtnText
         };
         // Apply different styles based on the ButtonStyle enum
         switch (style)
@@ -863,38 +863,31 @@ public class UIComponentFactory
                 btn.Width = 90;
                 btn.Margin = new Padding(0, 0, 15, 0);
                 btn.Padding = new Padding(2, 2, 2, 2);
-                btn.BackColor = Color.DodgerBlue;
-                btn.ForeColor = Color.White;
                 btn.FlatAppearance.BorderSize = 1;
-                btn.FlatAppearance.BorderColor = Color.RoyalBlue;
+                btn.FlatAppearance.BorderColor = Constants.Border;
                 break;
             case Constants.ButtonStyle.Longer:
                 btn.Width = 130;
                 btn.Margin = new Padding(1, 3, 1, 1);
                 btn.Padding = new Padding(2, 2, 2, 2);
-                btn.ForeColor = Color.Black;
                 btn.FlatAppearance.BorderSize = 1;
-                btn.FlatAppearance.BorderColor = Color.DarkGray;
+                btn.FlatAppearance.BorderColor = Constants.Border;
                 break;
             case Constants.ButtonStyle.ArrowBtn:
                 btn.Width = 20;
                 btn.Height = 20;
                 btn.Margin = new Padding(1, 0, 1, 0);
                 btn.Padding = new Padding(0, 0, 0, 0);
-                btn.BackColor = Color.White;
-                btn.ForeColor = SystemColors.ControlText;
                 btn.FlatAppearance.BorderSize = 1;
-                btn.FlatAppearance.BorderColor = Color.DarkGray;
+                btn.FlatAppearance.BorderColor = Constants.Border;
                 btn.BackgroundImageLayout = ImageLayout.Center;
                 break;
             case Constants.ButtonStyle.FlowControl:
                 btn.Width = 100;
                 btn.Margin = new Padding(5, 2, 5, 2);
                 btn.Padding = new Padding(5, 0, 5, 0);
-                btn.BackColor = Color.White;
-                btn.ForeColor = SystemColors.ControlText;
                 btn.FlatAppearance.BorderSize = 1;
-                btn.FlatAppearance.BorderColor = Color.DarkGray;
+                btn.FlatAppearance.BorderColor = Constants.Border;
                 btn.BackgroundImageLayout = ImageLayout.Center;
                 break;
             default:
@@ -902,10 +895,8 @@ public class UIComponentFactory
                 btn.Width = 90;
                 btn.Margin = new Padding(0);
                 btn.Padding = new Padding(2, 2, 2, 2);
-                btn.BackColor = Color.White;
-                btn.ForeColor = SystemColors.ControlText;
                 btn.FlatAppearance.BorderSize = 1;
-                btn.FlatAppearance.BorderColor = Color.DarkGray;
+                btn.FlatAppearance.BorderColor = Constants.Border;
                 break;
         }
 
@@ -925,9 +916,10 @@ public class UIComponentFactory
             RowCount = rows,
             AutoSize = height == null, // If height is not provided, enable AutoSize
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
+            CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
             Padding = new Padding(0),
             Margin = new Padding(0),
+            BackColor = Constants.FormColour            
         };
         // If height is explicitly provided, set it
         if (height != null)
@@ -1009,6 +1001,8 @@ public class UIComponentFactory
             Dock = DockStyle.Fill,
             Margin = margin ?? new Padding(5),
             Font = font ?? new Font("Segoe UI", 10),
+            ForeColor = Constants.PrimaryText,
+            BackColor = Constants.FormColour            
         };
         CPHLogger.LogV($"GroupBox created. Properties: Text=\"{title}\", Margin={groupBox.Margin}, Font={groupBox.Font}");
         return groupBox;
@@ -1028,6 +1022,7 @@ public class UIComponentFactory
             Anchor = anchor,
             Margin = margin ?? new Padding(0),
             Padding = margin ?? new Padding(0),
+            BackColor = Constants.FormColour        
         };
         CPHLogger.LogV($"FlowLayoutPanel created: Direction={flowPanel.FlowDirection}, WrapContents={flowPanel.WrapContents}, AutoSize={flowPanel.AutoSize}");
         return flowPanel;
@@ -1048,6 +1043,8 @@ public class UIComponentFactory
             Padding = new Padding(0),
             Margin = new Padding(0),
             IntegralHeight = iHeight,
+            BackColor = Constants.Surface,
+            ForeColor = Constants.PrimaryText            
         };
         // Set Width and Height only if specified (not null)
         if (widthParam.HasValue)
@@ -1074,17 +1071,20 @@ public static class Constants
     public const string ExecutableFilter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
     public const string SettingsFileName = "settings.json";
     public const string FormName = "SBZen Config Manager";
-    public static readonly Color FormColour = ColorTranslator.FromHtml("#121212");
+
+
+
+    public static readonly Color FormColour = ColorTranslator.FromHtml("#151515");
     public static readonly Color PrimaryText = ColorTranslator.FromHtml("#FFFFFF");
     public static readonly Color SecondaryText = ColorTranslator.FromHtml("#B0B0B0");
     public static readonly Color Accent = ColorTranslator.FromHtml("#BB86FC");
-    public static readonly Color Surface = ColorTranslator.FromHtml("#1E1E1E");
+    public static readonly Color Surface = ColorTranslator.FromHtml("#2A313E");
     public static readonly Color Border = ColorTranslator.FromHtml("#373737");
 
     public static readonly Color BtnBG = ColorTranslator.FromHtml("#1E1E1E");
     public static readonly Color BtnText = ColorTranslator.FromHtml("#FFFFFF");
-    public static readonly Color PrimaryBtnBG = ColorTranslator.FromHtml("#BB86FC");
-    public static readonly Color PrimaryBtnText = ColorTranslator.FromHtml("#000000");
+    public static readonly Color PrimaryBtnBG = ColorTranslator.FromHtml("#0F40A9");
+    public static readonly Color PrimaryBtnText = ColorTranslator.FromHtml("#FFFFFF");
 
 
 

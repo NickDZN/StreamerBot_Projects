@@ -14,15 +14,8 @@ using System.Windows.Forms; // For creating Windows Forms
 
 public class CPHInline
 {
-    // Importing user32.dll to retrieve the handle of the foreground window
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
     private static LoadStartupConfigForm mainFormInstance = null;
 
-    // Importing user32.dll to get the title of a window
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
     // Importing user32.dll to get the rectangle of a window
     [DllImport("user32.dll", SetLastError = true)]
@@ -31,19 +24,19 @@ public class CPHInline
     // Main method that executes the logic for setting up and displaying the form
     public bool Execute()
     {
-        // Step 1: Set up a static reference for CPH and arguments
         try
         {
+            // Set up a static reference for CPH and arguments
             CPH.LogDebug("SBSAM Loaded.");
             SB.CPH = CPH;
             SB.args = args;
         }
-                catch (Exception ex)
+        catch (Exception ex)
         {
             return CPHLogger.LogE($"Unable to create static CPH reference: {ex.Message}\n{ex.StackTrace}");
         }
 
-        // Step 2: Retrieve window details and open the form
+        // Get details of where to open new form and start population. 
         try
         {
             CPHLogger.LogV("Attempting to get process details");
@@ -74,13 +67,12 @@ public class CPHInline
             var monitors = Screen.AllScreens; // Get all monitors connected to the system
             LayoutLogger.logMonitorDetails(monitors);
 
-            // Step 3: Determine the monitor where the window resides
             Screen targetMonitor;
 
-            if (Screen.AllScreens.Length == 1)
+            if (monitors.Length == 1)
             {
                 // If only one monitor exists, no calculations are needed
-                targetMonitor = Screen.PrimaryScreen;
+                targetMonitor = monitors[0];
                 CPHLogger.LogI("Single monitor detected. Skipping multi-monitor calculations.");
             }
             else
@@ -119,7 +111,10 @@ public class CPHInline
                         // Apply normalized position
                         CPHLogger.LogI($"Applying normalized rectangle: {normalizedWindowRect}");
                         mainFormInstance.StartPosition = FormStartPosition.Manual;
-                        mainFormInstance.Location = new Point(normalizedWindowRect.X, normalizedWindowRect.Y);
+                        mainFormInstance.Location = new Point(
+                            targetMonitor.Bounds.Left + normalizedWindowRect.X + 15,
+                            targetMonitor.Bounds.Top + normalizedWindowRect.Y + 15
+                        );
 
                         // Handle unhandled exceptions in the STA thread
                         Application.ThreadException += (sender, args) =>
@@ -153,9 +148,7 @@ public class CPHInline
         }
         catch (Exception ex)
         {
-            // Log any errors that occur during execution
-            CPHLogger.LogE($"An error occurred during execution: {ex.Message}\n{ex.StackTrace}");
-            return false;
+            return CPHLogger.LogE($"An error occurred during execution: {ex.Message}\n{ex.StackTrace}");
         }
     }
 
@@ -181,17 +174,14 @@ public class CPHInline
         var monitorBounds = monitor.Bounds;
 
         // Log initial values for debugging
-        CPHLogger.LogD($"Initial Window Rect: {windowRect}");
-        CPHLogger.LogD($"Monitor Bounds: {monitorBounds}");
-
-        CPHLogger.LogI($"monitorBounds Left Pos: {monitorBounds.Left} Top Pos: {monitorBounds.Top} Right Pos: {monitorBounds.Right} Bottom Pos: {monitorBounds.Bottom}");
-        CPHLogger.LogI($"windowRect Left Pos: {windowRect.Left} Top Pos: {windowRect.Top} Right Pos: {windowRect.Right} Bottom Pos: {windowRect.Bottom}");
+        CPHLogger.LogI($"Initial Window Rect: {windowRect}");
+        CPHLogger.LogI($"Monitor Bounds: {monitorBounds}");
 
         // Adjust coordinates to align with the monitor's bounds
         int normalizedX = windowRect.Left - monitorBounds.Left;
         int normalizedY = windowRect.Top - monitorBounds.Top;
 
-        CPHLogger.LogI($"normalizedX: {normalizedX} normalizedY: {normalizedY}");
+        CPHLogger.LogD($"Monitor Alignment: Top={monitorBounds.Top}, Bottom={monitorBounds.Bottom}, Left={monitorBounds.Left}, Right={monitorBounds.Right}");
 
         // Consider vertical and horizontal offsets if monitors are centered
         if (monitorBounds.Top < 0 && monitorBounds.Bottom > 0)
@@ -203,8 +193,6 @@ public class CPHInline
             normalizedX += Math.Abs(monitorBounds.Left);
         }
 
-        CPHLogger.LogI($"normalizedX: {normalizedX} normalizedY: {normalizedY}");
-
         Rectangle normalizedRect = new Rectangle(
             normalizedX,
             normalizedY,
@@ -213,10 +201,11 @@ public class CPHInline
         );
 
         // Log the normalized rectangle for debugging
-        CPHLogger.LogD($"Normalized Window Rect: {normalizedRect}");
+        CPHLogger.LogI($"Normalized Window Rect: {normalizedRect}");
         return normalizedRect;
     }
 }
+
 
 /// <summary>
 ///
@@ -1085,7 +1074,20 @@ public static class Constants
     public const string ExecutableFilter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
     public const string SettingsFileName = "settings.json";
     public const string FormName = "SBZen Config Manager";
-    public static readonly Color FormColour = Color.WhiteSmoke;
+    public static readonly Color FormColour = ColorTranslator.FromHtml("#121212");
+    public static readonly Color PrimaryText = ColorTranslator.FromHtml("#FFFFFF");
+    public static readonly Color SecondaryText = ColorTranslator.FromHtml("#B0B0B0");
+    public static readonly Color Accent = ColorTranslator.FromHtml("#BB86FC");
+    public static readonly Color Surface = ColorTranslator.FromHtml("#1E1E1E");
+    public static readonly Color Border = ColorTranslator.FromHtml("#373737");
+
+    public static readonly Color BtnBG = ColorTranslator.FromHtml("#1E1E1E");
+    public static readonly Color BtnText = ColorTranslator.FromHtml("#FFFFFF");
+    public static readonly Color PrimaryBtnBG = ColorTranslator.FromHtml("#BB86FC");
+    public static readonly Color PrimaryBtnText = ColorTranslator.FromHtml("#000000");
+
+
+
     public static readonly string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
     public enum StartupMode
     {

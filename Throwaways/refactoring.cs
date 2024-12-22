@@ -310,8 +310,7 @@ public class LoadStartupConfigForm : Form
         // Create and style the GroupBox for applications
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating GroupBox for applications.");
         var applicationsGroupBox = UIComponentFactory.CreateGroupBox("Applications to run on bot startup");
-
-        // Define row/columns settings for the table. 
+        // Define row/columns settings the table will use.
         CPHLogger.LogV("[AddPermittedApplicationsSection] Defining column styles for application table.");
         var rowStyling = new List<RowStyle>
         {
@@ -323,27 +322,22 @@ public class LoadStartupConfigForm : Form
             new ColumnStyle(SizeType.Percent, 100f),
             new ColumnStyle(SizeType.AutoSize),
         };
-
         // Create the application table
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating application TableLayoutPanel.");
         var appTable = UIComponentFactory.CreateTableLayoutPanel(rows: 2, columns: 2, rowStyling: Constants.RowStyling.Custom, columnStyling: Constants.ColumnStyling.Custom, customRowStyles: rowStyling, customColumnStyles: columnStyling);
-
         // Add a ListBox for applications in the left column, first row
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating ListBox for applications.");
         var appListBox = UIComponentFactory.CreateListBox();
         appListBox.IntegralHeight = false;
         CPHLogger.LogV("[AddPermittedApplicationsSection] Add Listbox to table.");
         appTable.Controls.Add(appListBox, 0, 0);
-        
         // Create a FlowLayoutPanel for Add/Remove buttons
         CPHLogger.LogV("[AddPermittedApplicationsSection] Creating FlowLayoutPanel for Add/Remove buttons.");
-        var buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(FlowDirection.TopDown, wrapContents: true, autoSize: true, margin: new Padding(1), anchor: AnchorStyles.Top);
-        
+        var buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(FlowDirection.TopDown, wrapContents: true, autoSize: true, margin: new Padding(5), anchor: AnchorStyles.Top);
         // Add buttons for managing applications
         CPHLogger.LogV("[AddPermittedApplicationsSection] Add buttons for managing applications.");
         buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Add Application", Constants.ButtonStyle.Longer, _eventHandlers.AddApplication_Click));
-        
-        buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Add Application Path", Constants.ButtonStyle.Longer, _eventHandlers.AddApplicationPath_Click));
+        //buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Add Application Path", Constants.ButtonStyle.Longer, _eventHandlers.AddApplicationPath_Click));
         buttonPanel.Controls.Add(UIComponentFactory.CreateButton("Remove Application", Constants.ButtonStyle.Longer, _eventHandlers.RemoveApplication_Click));
         appTable.Controls.Add(buttonPanel, 1, 0);
         // Create a FlowLayoutPanel for arrow buttons in the left column, second row
@@ -432,7 +426,6 @@ public class LoadStartupConfigForm : Form
         CPHLogger.LogV("[AddSeparateActionGroups] Adding 'Blocked Actions' GroupBox to the main TableLayoutPanel.");
         coreLayoutPanelForTab.Controls.Add(blockedActionsGroupBox, 0, 3);
     }
-
 
     /// <summary>
     ///
@@ -613,55 +606,11 @@ public class LoadStartupConfigForm : Form
     }
 }
 
-
-
-
-
-
-
-
 public class EventHandlers
 {
-    private void AddApplication_Click(object sender, EventArgs e)
+    public void AddApplication_Click(object sender, EventArgs e)
     {
-        // Run the file dialog in a separate thread
-        Thread fileDialogThread = new Thread(() =>
-        {
-            try
-            {
-                using (OpenFileDialog fileDialog = new OpenFileDialog())
-                {
-                    fileDialog.Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
-                    fileDialog.Title = "Select an Application File";
-
-                    if (fileDialog.ShowDialog(this) == DialogResult.OK)
-                    {
-                        string selectedFile = fileDialog.FileName;
-                        this.Invoke(
-                            new Action(() =>
-                            {
-                                if (!applicationListBox.Items.Contains(selectedFile))
-                                {
-                                    applicationListBox.Items.Add(selectedFile);
-                                    saveConfigButton.Enabled = true;
-                                }
-                                else
-                                {
-                                    MessageBox.Show("This application file has already been added.");
-                                }
-                            })
-                        );
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"An error occurred while selecting the file:\n{ex.Message}");
-            }
-        });
-
-        fileDialogThread.SetApartmentState(ApartmentState.STA);
-        fileDialogThread.Start();
+        int a = 1;
     }
 
     public void AddApplicationPath_Click(object sender, EventArgs e)

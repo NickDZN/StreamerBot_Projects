@@ -141,7 +141,7 @@ public class LoadStartupConfigForm : Form
         coreLayoutPanelForForm.Controls.Add(_userConfigurationControls, 0, 0);
 
         // 🧩 Applications Panel
-        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationData>());
+        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationConfig>());
         coreLayoutPanelForForm.Controls.Add(_permittedStartupApplicationsSection, 0, 1);
 
         // 🧩 Permitted Actions Panel
@@ -184,41 +184,79 @@ public class LoadStartupConfigForm : Form
     }
 }
 
-    private void SetFormProperties(Form form)
-    {
-        CPHLogger.LogD("[S]SetFormProps.");
-        this.Text = Constants.FormName;
-        this.MinimumSize = new Size(100, 100);
-        this.BackColor = Constants.FormColour;
-        this.Font = new Font("Segoe UI", 10);
-        this.FormBorderStyle = FormBorderStyle.FixedDialog;
-        this.AutoSize = true;
-    }
-}
 
-public class StartupBehaviorControlPanel : UserControl
-{
-    public StartupBehaviorControl()
-    {
-        var layout = UIComponentFactory.CreateTableLayoutPanel(1, 2);
-        var startupLabel = UIComponentFactory.CreateLabel("Startup Behavior:");
-        var startupOption = UIComponentFactory.CreateComboBox(new List<string> { "Yes", "No", "Prompt" });
-        startupOption.SelectedIndexChanged += (sender, e) => OnStartupOptionChanged();
-        layout.Controls.Add(startupLabel, 0, 0);
-        layout.Controls.Add(startupOption, 1, 0);
-        Controls.Add(layout);
-    }
-
-    private void OnStartupOptionChanged()
-    {
-        MessageBox.Show("Startup option changed");
-    }
-}
 
 
 public class UserConfigurationPanel : UserControl 
 {
+    protected readonly Button _resetSettings;
+    protected readonly Button _importConfig;
+    protected readonly Button _exportConfig;
+    protected readonly Button _testConfig;
+    protected readonly Button _aboutApplication;
 
+    public UserConfigurationPanel()
+    {
+        
+        var configurationGroupBox = UIComponentFactory.CreateGroupBox("Manage your configuration");
+        var buttonTable = UIComponentFactory.CreateTableLayoutPanel(rows: 1, columns: 5, columnStyling: Constants.ColumnStyling.Distributed);
+
+        // Initialize Buttons
+        _resetSettings = UIComponentFactory.CreateButton("Reset All", Constants.ButtonStyle.Default, OnResetAll);
+        _importConfig = UIComponentFactory.CreateButton("Import", Constants.ButtonStyle.Default, OnImport);
+        _exportConfig = UIComponentFactory.CreateButton("Export", Constants.ButtonStyle.Default, OnExport);
+        _testConfig = UIComponentFactory.CreateButton("Test Config", Constants.ButtonStyle.Default, OnTestConfig);
+        _aboutApplication = UIComponentFactory.CreateButton("About", Constants.ButtonStyle.Default, OnAbout);
+
+        // Add buttons to the TableLayoutPanel
+        buttonTable.Controls.Add(_resetSettings, 0, 0);
+        buttonTable.Controls.Add(_importConfig, 1, 0);
+        buttonTable.Controls.Add(_exportConfig, 2, 0);
+        buttonTable.Controls.Add(_testConfig, 3, 0);
+        buttonTable.Controls.Add(_aboutApplication, 4, 0);
+
+
+        // Add TableLayoutPanel to GroupBox
+        CPHLogger.LogV("[AddUserConfigurationControlls] Adding TableLayoutPanel to GroupBox.");
+        configurationGroupBox.Controls.Add(buttonTable);
+
+        // Add GroupBox to UserControl
+        Controls.Add(configurationGroupBox);     
+    }
+
+    protected virtual void OnResetAll(object sender, EventArgs e)
+    {
+        DialogResult result = MessageBox.Show(
+            "Are you sure you want to reset the configuration?",
+            "Confirm Reset",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
+        if (result == DialogResult.Yes)
+        {
+            CPHLogger.LogV("Reset Settings...");
+        }
+    }
+
+    protected virtual void OnImport(object sender, EventArgs e)
+    {
+        CPHLogger.LogV("Importing Settings...");
+    }
+
+    protected virtual void OnExport(object sender, EventArgs e)
+    {
+        CPHLogger.LogV("Exporting Settings...");
+    }        
+
+    protected virtual void OnAbout(object sender, EventArgs e)
+    {
+        CPHLogger.LogV("About...");
+    }
+
+    protected virtual void OnTestConfig(object sender, EventArgs e)
+    {
+        CPHLogger.LogV("Testing Settings...");
+    }
 }
 
 
@@ -256,7 +294,7 @@ public class SelectItemsPanel : UserControl
         }
 
         // Attach a centralized selection change event handler.
-        _itemsListBox.SelectedIndexChanged += (s, e) => ListBoxHandler.OnListBoxIndexChanged(s, e, sectionTitle);
+        //_itemsListBox.SelectedIndexChanged += (s, e) => ListBoxEventHandler.OnListBoxIndexChanged(s, e, sectionTitle);
 
         // Create navigation buttons (Move Up and Move Down) for the ListBox.
         _navigationPanel = UIComponentFactory.CreateListBoxNavigation(_itemsListBox, sectionTitle);
@@ -264,7 +302,7 @@ public class SelectItemsPanel : UserControl
         // Create Add and Remove buttons with event handlers.
         _buttonPanel = UIComponentFactory.CreateFlowLayoutPanel();
         _addBtn = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Default, OnAddAction);
-        _removeBtn = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Default, (s, e) => ListBoxHandler.RemoveSelectedItem(_itemsListBox, sectionTitle));
+        _removeBtn = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Default, (s, e) => ListBoxEventHandler.RemoveSelectedItem(_itemsListBox, sectionTitle));
 
         // Add default buttons
         _buttonPanel.Controls.Add(_addBtn);
@@ -297,49 +335,57 @@ public class SelectItemsPanel : UserControl
     /// </summary>
     protected virtual void OnAddAction(object sender, EventArgs e)
     {
-        using (var inputDialog = new InputDialog("Enter a new item:"))
+        using (var dialog = new PathInputDialog(this))
         {
-            if (inputDialog.ShowDialog() == DialogResult.OK)
+            if (dialog.ShowDialog(this) == DialogResult.OK)
             {
-                _itemsListBox.Items.Add(inputDialog.InputText);
-                CPHLogger.LogV($"Item added: {inputDialog.InputText}");
+                string actionName = dialog.EnteredPath;
+                if (!string.IsNullOrWhiteSpace(actionName))
+                {
+                    _itemsListBox.Items.Add(actionName);
+                    MessageBox.Show($"Action added: {actionName}");
+                }
             }
         }
     }
 }
 
 
-
-
 /// <summary>
-/// A specialized panel for managing a list of applications, 
+/// A specialized panel for managing a list of applications,
 /// including Add, Remove, and Path Add buttons.
 /// </summary>
 public class SelectApplicationsPanel : SelectItemsPanel
 {
-    private readonly Button _addPathBtn;
-
-    public SelectApplicationsPanel(string sectionTitle, List<ApplicationData> applications)
-        : base(sectionTitle, applications.ConvertAll(app => app.Name))
-    {
-    }
+    private readonly Button _addPathBtn; // Button to add application paths
 
     /// <summary>
-    /// Overrides the base method to add an "Add Path" button.
+    /// Initializes the SelectApplicationsPanel with a section title and a list of applications.
     /// </summary>
-    protected override void AddCustomButtons()
+    /// <param name="sectionTitle">Title of the panel.</param>
+    /// <param name="applications">List of applications to populate the panel.</param>
+    public SelectApplicationsPanel(string sectionTitle, List<ApplicationConfig> applications)
+        : base(sectionTitle, applications.ConvertAll(app => app.Path))
     {
+        // Initialize Add Path button during construction
         _addPathBtn = UIComponentFactory.CreateButton(
-            "Add Path", 
-            Constants.ButtonStyle.Default, 
+            "Add Path",
+            Constants.ButtonStyle.Default,
             OnAddPathAction
         );
 
-        // Insert at a specific position (e.g., after "Add" button)
-        _buttonPanel.Controls.Add(_addPathBtn);
-        _buttonPanel.Controls.SetChildIndex(_addPathBtn, 1); // Place at index 1 (after Add button)
+        // Add custom buttons during initialization
+        AddCustomButtons();
     }
 
+    /// <summary>
+    /// Overrides the base method to add an "Add Path" button to the control panel.
+    /// </summary>
+    protected override void AddCustomButtons()
+    {
+        _buttonPanel.Controls.Add(_addPathBtn);
+        _buttonPanel.Controls.SetChildIndex(_addPathBtn, 1); // Place after the "Add" button
+    }
 
     /// <summary>
     /// Handles the "Add Path" button click event.
@@ -349,16 +395,35 @@ public class SelectApplicationsPanel : SelectItemsPanel
     {
         using (var folderDialog = new FolderBrowserDialog())
         {
+            folderDialog.Description = "Select an Application Path";
+            folderDialog.ShowNewFolderButton = false;
+
             if (folderDialog.ShowDialog() == DialogResult.OK)
             {
-                _itemsListBox.Items.Add(folderDialog.SelectedPath);
-                CPHLogger.LogV($"Application path added: {folderDialog.SelectedPath}");
+                string selectedPath = folderDialog.SelectedPath;
+
+                // Prevent duplicate entries
+                if (!_itemsListBox.Items.Contains(selectedPath))
+                {
+                    _itemsListBox.Items.Add(selectedPath);
+                    CPHLogger.LogI($"Application path added: {selectedPath}");
+                    MessageBox.Show($"Application path added:\n{selectedPath}", 
+                        "Path Added", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Information);
+                }
+                else
+                {
+                    CPHLogger.LogW($"Duplicate application path detected: {selectedPath}");
+                    MessageBox.Show("This application path has already been added.", 
+                        "Duplicate Path", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Warning);
+                }
             }
         }
     }
 }
-
-
 
 
 
@@ -383,19 +448,100 @@ public class SelectActionsPanel : SelectItemsPanel
 
     protected override void OnAddAction(object sender, EventArgs e)
     {
-        var actionName = Microsoft.VisualBasic.Interaction.InputBox(
-            "Enter action name:",
-            "Add Action",
-            "New Action"
-        );
+        CPHLogger.LogI($"Adding an action");
+    }
+}
 
-        if (!string.IsNullOrWhiteSpace(actionName))
+
+
+/// <summary>
+/// Panel for configuring startup behavior with selectable options.
+/// </summary>
+public class StartupBehaviorControlPanel : UserControl
+{
+    // Controls
+    private readonly ComboBox _startupOptionComboBox; // Dropdown for startup options
+    private readonly Label _startupLabel; // Label for clarity
+
+    /// <summary>
+    /// Initializes the Startup Behavior Control Panel.
+    /// </summary>
+    public StartupBehaviorControlPanel()
+    {
+        // Create the layout
+        var layout = UIComponentFactory.CreateTableLayoutPanel(1, 2);
+
+        // Create label
+        _startupLabel = UIComponentFactory.CreateLabel("Startup Behavior:");
+
+        // Create ComboBox with options
+        _startupOptionComboBox = UIComponentFactory.CreateComboBox(
+            new List<string> { "Yes", "No", "Prompt" }
+        );
+        _startupOptionComboBox.SelectedIndexChanged += OnStartupOptionChanged;
+
+        // Add controls to layout
+        layout.Controls.Add(_startupLabel, 0, 0); // Add Label to first column
+        layout.Controls.Add(_startupOptionComboBox, 1, 0); // Add ComboBox to second column
+
+        // Add layout to UserControl
+        Controls.Add(layout);
+    }
+
+    /// <summary>
+    /// Handles changes in the ComboBox selection.
+    /// </summary>
+    private void OnStartupOptionChanged(object sender, EventArgs e)
+    {
+        if (_startupOptionComboBox.SelectedItem != null)
         {
-            _itemsListBox.Items.Add(actionName);
-            MessageBox.Show($"Action added: {actionName}");
+            string selectedOption = _startupOptionComboBox.SelectedItem.ToString();
+            CPHLogger.LogI($"Startup option changed to: {selectedOption}");
+
+            // Display a user-friendly message
+            MessageBox.Show($"Startup option changed to: {selectedOption}", 
+                "Startup Behavior Changed", 
+                MessageBoxButtons.OK, 
+                MessageBoxIcon.Information);
         }
     }
 }
+
+
+public class FormsControlPanel : UserControl
+{
+    public FormsControlPanel()
+    {
+        var flowControlButtonPanel = UIComponentFactory.CreateFlowLayoutPanel(
+            autoSize: true,
+            wrapContents: false,
+            anchor: AnchorStyles.None
+        );
+
+        // Save Button
+        var saveButton = UIComponentFactory.CreateButton(
+            "Save",
+            Constants.ButtonStyle.FlowControl,
+            (s, e) => MessageBox.Show("Configuration Saved!")
+        );
+
+        // Close Button
+        var closeButton = UIComponentFactory.CreateButton(
+            "Close",
+            Constants.ButtonStyle.FlowControl,
+            (s, e) => Application.Exit()
+        );
+
+        // Add Buttons
+        flowControlButtonPanel.Controls.Add(saveButton);
+        flowControlButtonPanel.Controls.Add(closeButton);
+
+        // Add FlowControl Panel to UserControl
+        Controls.Add(flowControlButtonPanel);
+    }
+}
+
+
 
 
 
@@ -412,9 +558,10 @@ public static class ListBoxEventHandler
     /// </summary>
     public static void OnMoveItemUp(ListBox listBox)
     {
-        if (listBox.SelectedItem == null || listBox.SelectedIndex <= 0) { 
-            CPHLogger.LogE("OnMoveItemUp Error");
-            return; 
+        if (listBox.SelectedItem == null || listBox.SelectedIndex <= 0)
+        {
+            CPHLogger.LogE("Cannot move item up. Invalid selection.");
+            return;
         }
 
         int index = listBox.SelectedIndex;
@@ -430,9 +577,10 @@ public static class ListBoxEventHandler
     /// </summary>
     public static void OnMoveItemDown(ListBox listBox)
     {
-        if (listBox.SelectedItem == null || listBox.SelectedIndex >= listBox.Items.Count - 1) {
-            CPHLogger.LogE("OnMoveItemDown Error");
-            return; 
+        if (listBox.SelectedItem == null || listBox.SelectedIndex >= listBox.Items.Count - 1)
+        {
+            CPHLogger.LogE("Cannot move item down. Invalid selection.");
+            return;
         }
 
         int index = listBox.SelectedIndex;
@@ -446,9 +594,10 @@ public static class ListBoxEventHandler
 
     public static void RemoveSelectedItem(ListBox listBox, string context)
     {
-        if (listBox.SelectedItem == null) {
-            CPHLogger.LogE("RemoveSelectedItem Error");
-            return;             
+        if (listBox.SelectedItem == null)
+        {
+            CPHLogger.LogE("No item selected for removal.");
+            return;
         }
 
         var removedItem = listBox.SelectedItem.ToString();
@@ -465,58 +614,100 @@ public static class ListBoxEventHandler
 
 
 
-
-public class SelectActionsPanel : UserControl 
+public class PathInputDialog : Form
 {
-    public StartupApplicationsSection(string sectionTitle, List<ActionData> applications)
+    private TextBox pathTextBox;
+    private Button okButton;
+    private Button cancelButton;
+
+    public string EnteredPath => pathTextBox.Text;
+
+    private const string PlaceholderText = "Enter or paste the application path here";
+
+    public PathInputDialog(Form ownerForm)
     {
-        // UI Holders.
-        var _applicationGroupBox     = UIComponentFactory.CreateGroupBox(sectionTitle);
-        var _applicationsLayoutTable = UIComponentFactory.CreateTableLayoutPanel(2, 1);    
-        var _applicationsListBox     = UIComponentFactory.CreateListBox();
-        var _applicationsButtonPanel = UIComponentFactory.CreateFlowLayoutPanel();
+        Text = "Enter Application Path";
+        Width = 400;
+        Height = 150;
 
-        // UI Interactions
-        var _addBtn      = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Default);
-        var _addPathBtn  = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Default);
-        var _removeBtn   = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Default);
-        
-        // Add events. 
-        _addBtn.Click        += (sender, e) => OnAddAction();
-        _addPathBtn.Click    += (sender, e) => OnAddPathAction();
-        _removeBtn.Click     += (sender, e) => OnRemoveAction();
+        StartPosition = FormStartPosition.Manual;
+        Location = new Point(
+            ownerForm.Left + (ownerForm.Width - Width) / 2,
+            ownerForm.Top + (ownerForm.Height - Height) / 2
+        );
 
-        // Build section. 
-        _applicationsButtonPanel.Controls.Add(_addBtn);
-        _applicationsButtonPanel.Controls.Add(_addPathBtn);
-        _applicationsButtonPanel.Controls.Add(_removeBtn);
+        Label promptLabel = new Label
+        {
+            Text = "Enter or paste the path of the application:",
+            Left = 10,
+            Top = 10,
+            Width = 360,
+        };
+        pathTextBox = new TextBox
+        {
+            Left = 10,
+            Top = 40,
+            Width = 360,
+            ForeColor = Color.Gray,
+            Text = PlaceholderText,
+        };
 
+        // Set up placeholder events
+        pathTextBox.GotFocus += RemovePlaceholder;
+        pathTextBox.LostFocus += SetPlaceholder;
 
-        _applicationsLayoutTable.Controls.Add(_applicationsListBox, 0, 0);
-        _applicationsLayoutTable.Controls.Add(_applicationsButtonPanel, 1, 0);
-        
-        _applicationGroupBox.Controls.Add(_applicationsLayoutTable);    
-        
-        Controls.Add(applicationsLayoutTable);
+        okButton = new Button
+        {
+            Text = "OK",
+            Left = 220,
+            Width = 75,
+            Top = 70,
+            DialogResult = DialogResult.OK,
+        };
+        cancelButton = new Button
+        {
+            Text = "Cancel",
+            Left = 300,
+            Width = 75,
+            Top = 70,
+            DialogResult = DialogResult.Cancel,
+        };
+
+        okButton.Click += (sender, e) =>
+        {
+            DialogResult = DialogResult.OK;
+            Close();
+        };
+        cancelButton.Click += (sender, e) =>
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        };
+
+        Controls.Add(promptLabel);
+        Controls.Add(pathTextBox);
+        Controls.Add(okButton);
+        Controls.Add(cancelButton);
+    }
+
+    private void RemovePlaceholder(object sender, EventArgs e)
+    {
+        if (pathTextBox.Text == PlaceholderText)
+        {
+            pathTextBox.Text = "";
+            pathTextBox.ForeColor = Color.Black;
+        }
+    }
+
+    private void SetPlaceholder(object sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(pathTextBox.Text))
+        {
+            pathTextBox.Text = PlaceholderText;
+            pathTextBox.ForeColor = Color.Gray;
+        }
     }
 }
-
-
-
-
-public class StartupBehaviorControlPanel : UserControl 
-{
-
-}
-
-
-public class FormsControlPanel : UserControl 
-{
-
-}
-
-
-
 
 
 
@@ -580,7 +771,7 @@ public class UIComponentFactory
             Constants.ButtonStyle.ArrowBtn,
             (s, e) => {
                 CPHLogger.LogV($"[{target}] Move Up button clicked.");
-                ListBoxHandler.MoveItemUp(listBox);
+                ListBoxEventHandler.OnMoveItemUp(listBox);
             }
         );
 
@@ -589,7 +780,7 @@ public class UIComponentFactory
             Constants.ButtonStyle.ArrowBtn,
             (s, e) => {
                 CPHLogger.LogV($"[{target}] Move Down button clicked.");
-                ListBoxHandler.MoveItemDown(listBox);
+                ListBoxEventHandler.OnMoveItemDown(listBox);
             }
         );
 
@@ -927,13 +1118,13 @@ public class UIComponentFactory
 
 
 
-public class ApplicationFileDetails
+public class ApplicationDetails
 {
     public string FileName { get; set; }
     public string FullPath { get; set; }
     public int Index { get; set; } // New property to store the index
 
-    public ApplicationFileDetails(string fullPath, int index)
+    public ApplicationDetails(string fullPath, int index)
     {
         FullPath = fullPath;
         FileName = Path.GetFileName(fullPath);

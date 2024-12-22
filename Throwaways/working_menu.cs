@@ -619,6 +619,21 @@ public class ActionManagerForm : Form
         }
     }
 
+
+    public class ApplicationData
+    {
+        public string Name { get; set; }
+        public string Path { get; set; }
+
+        public ApplicationData(string name, string path)
+        {
+            Name = name;
+            Path = path;
+        }
+    }
+
+
+
     private void CancelButton_Click(object sender, EventArgs e)
     {
         Close();

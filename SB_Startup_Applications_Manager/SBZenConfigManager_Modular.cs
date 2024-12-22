@@ -109,46 +109,80 @@ public class CPHInline
 /// <summary>
 /// Main configuration form for managing Streamer.bot settings.
 /// </summary>
+/// <summary>
+/// Main configuration form for managing Streamer.bot settings.
+/// </summary>
 public class LoadStartupConfigForm : Form
 {
-    private readonly UserConfigurationPanel _userConfigurationControls;
-    private readonly SelectApplicationsPanel _permittedStartupApplicationsSection;
-    private readonly SelectActionsPanel _permittedActionsSection;
-    private readonly SelectActionsPanel _blockedActionsSection;
-    private readonly StartupBehaviorControlPanel _startupBehaviorControl;
-    private readonly FormsControlPanel _formFlowControls;
+    // Panel Controls
+    private readonly UserConfigurationPanel _userConfigurationControls;       // User settings and configuration controls
+    private readonly SelectApplicationsPanel _permittedStartupApplicationsSection; // Applications panel
+    private readonly SelectActionsPanel _permittedActionsSection;             // Allowed actions panel
+    private readonly SelectActionsPanel _blockedActionsSection;              // Blocked actions panel
+    private readonly StartupBehaviorControlPanel _startupBehaviorControl;    // Startup behavior settings
+    private readonly FormsControlPanel _formFlowControls;                    // General form controls
 
+    /// <summary>
+    /// Initializes the configuration form with active window dimensions and action data.
+    /// </summary>
+    /// <param name="activeWindowRect">Screen rectangle for positioning the form.</param>
+    /// <param name="actions">List of actions to populate permitted and blocked sections.</param>
     public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
     {
         CPHLogger.LogD("[S]LoadStartupConfigForm.");
-        SetFormProperties(this);
-        SuspendLayout();
+        SetFormProperties(this); // Set form properties (size, colors, etc.)
+        SuspendLayout(); // Suspend layout updates during initialization
 
+        // Create the core layout panel for organizing all sections
         var coreLayoutPanelForForm = UIComponentFactory.CreateTableLayoutPanel(rows: 6, columns: 1);
 
+        // 🧩 User Configuration Panel
         _userConfigurationControls = new UserConfigurationPanel();
-        coreLayoutPanelForForm.Controls.Add(_userConfigurationControls, 0, 0);        
+        coreLayoutPanelForForm.Controls.Add(_userConfigurationControls, 0, 0);
 
-        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Actions", actions);
+        // 🧩 Applications Panel
+        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationData>());
         coreLayoutPanelForForm.Controls.Add(_permittedStartupApplicationsSection, 0, 1);
 
-        _permittedStartupActionsSection = new SelectActionsPanel("Permitted Actions", actions);
-        coreLayoutPanelForForm.Controls.Add(_permittedStartupActionsSection, 0, 2);
+        // 🧩 Permitted Actions Panel
+        _permittedActionsSection = new SelectActionsPanel("Permitted Actions", actions);
+        coreLayoutPanelForForm.Controls.Add(_permittedActionsSection, 0, 2);
 
-        _blockedStartupActionsSection = new SelectActionsPanel("Blocked Actions", actions);
-        coreLayoutPanelForForm.Controls.Add(_blockedStartupActionsSection, 0, 3);
+        // 🧩 Blocked Actions Panel
+        _blockedActionsSection = new SelectActionsPanel("Blocked Actions", actions);
+        coreLayoutPanelForForm.Controls.Add(_blockedActionsSection, 0, 3);
 
+        // 🧩 Startup Behavior Control Panel
         _startupBehaviorControl = new StartupBehaviorControlPanel();
         coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl, 0, 4);
 
+        // 🧩 Form Flow Controls Panel
         _formFlowControls = new FormsControlPanel();
         coreLayoutPanelForForm.Controls.Add(_formFlowControls, 0, 5);
 
+        // Add the core layout panel to the form
         Controls.Add(coreLayoutPanelForForm);
-        ResumeLayout();
-        CPHLogger.LogAll(this);
-        CPHLogger.logRectDetails(activeWindowRect);
+
+        ResumeLayout(); // Resume layout updates
+        CPHLogger.LogAll(this); // Log all form components
+        CPHLogger.logRectDetails(activeWindowRect); // Log rectangle details for debugging
     }
+
+    /// <summary>
+    /// Sets the default properties for the form.
+    /// </summary>
+    /// <param name="form">The target form object.</param>
+    private void SetFormProperties(Form form)
+    {
+        CPHLogger.LogD("[S]SetFormProps.");
+        form.Text = Constants.FormName;
+        form.MinimumSize = new Size(100, 100);
+        form.BackColor = Constants.FormColour;
+        form.Font = new Font("Segoe UI", 10);
+        form.FormBorderStyle = FormBorderStyle.FixedDialog;
+        form.AutoSize = true;
+    }
+}
 
     private void SetFormProperties(Form form)
     {
@@ -188,84 +222,128 @@ public class UserConfigurationPanel : UserControl
 }
 
 
-public class SelectApplicationsPanel : UserControl
+/// <summary>
+/// A generic base class for panels managing a list of items with common functionality,
+/// including a ListBox, Add/Remove buttons, and navigation controls (Move Up/Down).
+/// </summary>
+/// <typeparam name="T">The type of data the panel will manage (e.g., string, ActionData).</typeparam>
+public class SelectItemsPanel : UserControl
 {
-    private readonly ListBox _applicationsListBox;
-    private readonly Button _addBtn;
-    private readonly Button _addPathBtn;
-    private readonly Button _removeBtn;
+    // Shared UI Components for managing items
+    protected readonly ListBox          _itemsListBox;      // Displays the list of items.
+    protected readonly Button           _addBtn;            // Button to add new items.
+    protected readonly Button           _removeBtn;         // Button to remove selected items.
+    protected readonly FlowLayoutPanel  _buttonPanel;       // Panel for Add/Remove buttons.
+    protected readonly FlowLayoutPanel  _navigationPanel;   // Panel for Move Up/Down buttons.
 
 
     /// <summary>
-    /// Initializes a new instance of SelectApplicationsPanel.
+    /// Initializes a new instance of the SelectItemsPanel class.
     /// </summary>
-    /// <param name="sectionTitle">Title of the section (e.g., "Startup Applications").</param>
-    /// <param name="applications">List of applications to populate the ListBox.</param>
-    public SelectApplicationsPanel(string sectionTitle, List<ApplicationData> applications)
+    /// <param name="sectionTitle">Title of the panel, displayed in the GroupBox.</param>
+    /// <param name="items">List of initial items to populate the ListBox.</param>
+    public SelectItemsPanel(string sectionTitle, List<string> items)
     {
-        // Create GroupBox as the outer container
-        var applicationGroupBox = UIComponentFactory.CreateGroupBox(sectionTitle);
+        // Create a GroupBox to 
+        var itemsGroupBox = UIComponentFactory.CreateGroupBox(sectionTitle);
+        var layoutTable = UIComponentFactory.CreateTableLayoutPanel(2, 1);
 
-        // Create TableLayoutPanel for layout
-        var applicationsLayoutTable = UIComponentFactory.CreateTableLayoutPanel(2, 1);
-        var applicationsButtonPanel = UIComponentFactory.CreateFlowLayoutPanel();
-
-        // ListBox for displaying applications
-        _applicationsListBox = UIComponentFactory.CreateListBox();
-        foreach (var app in applications)
+        // Initialize the ListBox and populate it with initial items.
+        _itemsListBox = UIComponentFactory.CreateListBox();
+        foreach (var item in items)
         {
-            _applicationsListBox.Items.Add(app.Name);
+            _itemsListBox.Items.Add(item);
         }
 
-        // Create Arrow Buttons. 
-        var listNavigationPanel = UIComponentFactory.CreateListBoxNavigation(_applicationsListBox, "ApplicationsPanel");        
+        // Attach a centralized selection change event handler.
+        _itemsListBox.SelectedIndexChanged += (s, e) => ListBoxHandler.OnListBoxIndexChanged(s, e, sectionTitle);
 
-        // Attach selection changed event
-        _applicationsListBox.SelectedIndexChanged += ListBoxEventHandler.OnListBoxIndexChanged;
+        // Create navigation buttons (Move Up and Move Down) for the ListBox.
+        _navigationPanel = UIComponentFactory.CreateListBoxNavigation(_itemsListBox, sectionTitle);
 
-        // Create Buttons with unique EHs. 
+        // Create Add and Remove buttons with event handlers.
+        _buttonPanel = UIComponentFactory.CreateFlowLayoutPanel();
         _addBtn = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Default, OnAddAction);
-        _addPathBtn = UIComponentFactory.CreateButton("Add Path", Constants.ButtonStyle.Default, OnAddPathAction);
+        _removeBtn = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Default, (s, e) => ListBoxHandler.RemoveSelectedItem(_itemsListBox, sectionTitle));
 
-        // Create Buttons with centraliaed EHs 
-        _removeBtn = UIComponentFactory.CreateButton(
-            "Remove", 
-            Constants.ButtonStyle.Default, 
-            (s, e) => ListBoxHandler.RemoveSelectedItem(_applicationsListBox, "ApplicationsPanel"));
+        // Add default buttons
+        _buttonPanel.Controls.Add(_addBtn);
+        _buttonPanel.Controls.Add(_removeBtn);
 
-        // Add buttons to FlowLayoutPanel
-        _applicationsButtonPanel.Controls.Add(_addBtn);
-        _applicationsButtonPanel.Controls.Add(_addPathBtn);
-        _applicationsButtonPanel.Controls.Add(_removeBtn);
+        // Allow derived classes to add custom buttons
+        AddCustomButtons();
 
-        // Add controls to TableLayoutPanel 
-        applicationsLayoutTable.Controls.Add(_applicationsListBox, 0, 0);
-        applicationsLayoutTable.Controls.Add(applicationsButtonPanel, 1, 0);
-        applicationsLayoutTable.Controls.Add(listNavigationPanel, 0, 1);
+        // Add controls to the layout table.
+        layoutTable.Controls.Add(_itemsListBox, 0, 0); // First cell: ListBox
+        layoutTable.Controls.Add(_buttonPanel, 1, 0);   // Second cell: Button Panel
+        layoutTable.Controls.Add(_navigationPanel, 0, 1); // Navigation Panel under ListBox
 
-        // Add layout to GroupBox and GroupBox to Panel
-        applicationGroupBox.Controls.Add(applicationsLayoutTable);
-        Controls.Add(applicationGroupBox);
+        // Add the layout table to the GroupBox and the GroupBox to the UserControl.
+        itemsGroupBox.Controls.Add(layoutTable);
+        Controls.Add(itemsGroupBox);
     }
 
     /// <summary>
-    /// Handles Add Button Click.
+    /// Virtual method for derived classes to add custom buttons.
     /// </summary>
-    private void OnAddAction(object sender, EventArgs e)
+    protected virtual void AddCustomButtons()
     {
-        using (var openFileDialog = new OpenFileDialog())
+        // Intentionally left empty, to be overridden by derived classes.
+    }
+
+    /// <summary>
+    /// Handles the Add button click event.
+    /// Opens a dialog to add a new item to the ListBox.
+    /// </summary>
+    protected virtual void OnAddAction(object sender, EventArgs e)
+    {
+        using (var inputDialog = new InputDialog("Enter a new item:"))
         {
-            openFileDialog.Filter = Constants.ExecutableFilter;
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            if (inputDialog.ShowDialog() == DialogResult.OK)
             {
-                _applicationsListBox.Items.Add(openFileDialog.FileName);
-                MessageBox.Show($"Application added: {openFileDialog.FileName}");
+                _itemsListBox.Items.Add(inputDialog.InputText);
+                CPHLogger.LogV($"Item added: {inputDialog.InputText}");
             }
         }
     }
+}
+
+
+
+
+/// <summary>
+/// A specialized panel for managing a list of applications, 
+/// including Add, Remove, and Path Add buttons.
+/// </summary>
+public class SelectApplicationsPanel : SelectItemsPanel
+{
+    private readonly Button _addPathBtn;
+
+    public SelectApplicationsPanel(string sectionTitle, List<ApplicationData> applications)
+        : base(sectionTitle, applications.ConvertAll(app => app.Name))
+    {
+    }
 
     /// <summary>
-    /// Handles Add Path Button Click.
+    /// Overrides the base method to add an "Add Path" button.
+    /// </summary>
+    protected override void AddCustomButtons()
+    {
+        _addPathBtn = UIComponentFactory.CreateButton(
+            "Add Path", 
+            Constants.ButtonStyle.Default, 
+            OnAddPathAction
+        );
+
+        // Insert at a specific position (e.g., after "Add" button)
+        _buttonPanel.Controls.Add(_addPathBtn);
+        _buttonPanel.Controls.SetChildIndex(_addPathBtn, 1); // Place at index 1 (after Add button)
+    }
+
+
+    /// <summary>
+    /// Handles the "Add Path" button click event.
+    /// Opens a folder selection dialog to add an application via its path.
     /// </summary>
     private void OnAddPathAction(object sender, EventArgs e)
     {
@@ -273,14 +351,51 @@ public class SelectApplicationsPanel : UserControl
         {
             if (folderDialog.ShowDialog() == DialogResult.OK)
             {
-                _applicationsListBox.Items.Add(folderDialog.SelectedPath);
-                MessageBox.Show($"Path added: {folderDialog.SelectedPath}");
+                _itemsListBox.Items.Add(folderDialog.SelectedPath);
+                CPHLogger.LogV($"Application path added: {folderDialog.SelectedPath}");
             }
         }
     }
 }
 
 
+
+
+
+/// <summary>
+/// Panels which contain a list of actions from the bot. 
+/// Inherits from SelectItemsPanel handling shared functionality for other list panels..
+/// </summary>
+public class SelectActionsPanel : SelectItemsPanel
+{
+    /// <summary>
+    /// Initializes a new instance of the SelectActionsPanel class.
+    /// </summary>
+    /// <param name="sectionTitle">The title displayed on the panel (e.g., "Permitted Actions").</param>
+    /// <param name="actions">A list of actions to populate the ListBox with.</param>
+    public SelectActionsPanel(string sectionTitle, List<ActionData> actions) 
+        // Calls the base class constructor (SelectItemsPanel) to initialize shared components.
+        // Converts the list of ActionData objects to a list of their names (strings) for display.
+        : base(sectionTitle, actions.ConvertAll(action => action.Name))
+    {
+        // No Customer Additions Required. 
+    }
+
+    protected override void OnAddAction(object sender, EventArgs e)
+    {
+        var actionName = Microsoft.VisualBasic.Interaction.InputBox(
+            "Enter action name:",
+            "Add Action",
+            "New Action"
+        );
+
+        if (!string.IsNullOrWhiteSpace(actionName))
+        {
+            _itemsListBox.Items.Add(actionName);
+            MessageBox.Show($"Action added: {actionName}");
+        }
+    }
+}
 
 
 
@@ -328,26 +443,17 @@ public static class ListBoxEventHandler
         listBox.SelectedIndex = index + 1;
     }
 
-    /// <summary>
-    /// 
-    /// TODO: Implement central version of this. 
-    /// 
-    /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
-    
-    public static void OnRemoveAction(object sender, EventArgs e)
+
+    public static void RemoveSelectedItem(ListBox listBox, string context)
     {
-        if (_applicationsListBox.SelectedItem != null)
-        {
-            var removedItem = _applicationsListBox.SelectedItem.ToString();
-            _applicationsListBox.Items.Remove(_applicationsListBox.SelectedItem);
-            MessageBox.Show($"Removed {sender.name} list item: {removedItem}");
+        if (listBox.SelectedItem == null) {
+            CPHLogger.LogE("RemoveSelectedItem Error");
+            return;             
         }
-        else
-        {
-            MessageBox.Show("Please select an application to remove.");
-        }
+
+        var removedItem = listBox.SelectedItem.ToString();
+        listBox.Items.Remove(listBox.SelectedItem);
+        MessageBox.Show($"Removed {context} item: {removedItem}");
     }
 }
 

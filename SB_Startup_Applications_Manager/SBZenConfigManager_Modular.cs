@@ -129,43 +129,51 @@ public class LoadStartupConfigForm : Form
     /// <param name="actions">List of actions to populate permitted and blocked sections.</param>
     public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
     {
-        CPHLogger.LogD("[S]LoadStartupConfigForm.");
-        SetFormProperties(this); // Set form properties (size, colors, etc.)
-        SuspendLayout(); // Suspend layout updates during initialization
+        CPHLogger.LogC("[S]LoadStartupConfigForm.");
+        SetFormProperties(this);
+        SuspendLayout();
 
         // Create the core layout panel for organizing all sections
+        CPHLogger.LogC("Creating Table Layout"); 
         var coreLayoutPanelForForm = UIComponentFactory.CreateTableLayoutPanel(rows: 6, columns: 1);
 
         // 🧩 User Configuration Panel
+        CPHLogger.LogC("Creating _userConfigurationControls"); 
         _userConfigurationControls = new UserConfigurationPanel();
         coreLayoutPanelForForm.Controls.Add(_userConfigurationControls, 0, 0);
 
         // 🧩 Applications Panel
-        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationConfig>());
+        CPHLogger.LogC("Creating _permittedStartupApplicationsSection"); 
+        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationDetails>());
         coreLayoutPanelForForm.Controls.Add(_permittedStartupApplicationsSection, 0, 1);
 
         // 🧩 Permitted Actions Panel
+        CPHLogger.LogC("Creating _permittedActionsSection"); 
         _permittedActionsSection = new SelectActionsPanel("Permitted Actions", actions);
         coreLayoutPanelForForm.Controls.Add(_permittedActionsSection, 0, 2);
 
         // 🧩 Blocked Actions Panel
+        CPHLogger.LogC("Creating _blockedActionsSection"); 
         _blockedActionsSection = new SelectActionsPanel("Blocked Actions", actions);
         coreLayoutPanelForForm.Controls.Add(_blockedActionsSection, 0, 3);
 
         // 🧩 Startup Behavior Control Panel
+        CPHLogger.LogC("Creating _startupBehaviorControl"); 
         _startupBehaviorControl = new StartupBehaviorControlPanel();
         coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl, 0, 4);
 
         // 🧩 Form Flow Controls Panel
+        CPHLogger.LogC("Creating _formFlowControls"); 
         _formFlowControls = new FormsControlPanel();
         coreLayoutPanelForForm.Controls.Add(_formFlowControls, 0, 5);
 
         // Add the core layout panel to the form
+        CPHLogger.LogC("Adding coreLayoutPanelForForm to Controls."); 
         Controls.Add(coreLayoutPanelForForm);
+        ResumeLayout();
 
-        ResumeLayout(); // Resume layout updates
-        CPHLogger.LogAll(this); // Log all form components
-        CPHLogger.logRectDetails(activeWindowRect); // Log rectangle details for debugging
+        CPHLogger.LogAll(this);
+        CPHLogger.logRectDetails(activeWindowRect);
     }
 
     /// <summary>
@@ -174,13 +182,15 @@ public class LoadStartupConfigForm : Form
     /// <param name="form">The target form object.</param>
     private void SetFormProperties(Form form)
     {
-        CPHLogger.LogD("[S]SetFormProps.");
+        CPHLogger.LogC("[S]SetFormProps.");
         form.Text = Constants.FormName;
         form.MinimumSize = new Size(100, 100);
         form.BackColor = Constants.FormColour;
         form.Font = new Font("Segoe UI", 10);
         form.FormBorderStyle = FormBorderStyle.FixedDialog;
         form.AutoSize = true;
+        
+        CPHLogger.LogC("[E]SetFormProps.");
     }
 }
 
@@ -197,11 +207,12 @@ public class UserConfigurationPanel : UserControl
 
     public UserConfigurationPanel()
     {
-        
+        CPHLogger.LogC("[S]UserConfigurationPanel.");
         var configurationGroupBox = UIComponentFactory.CreateGroupBox("Manage your configuration");
         var buttonTable = UIComponentFactory.CreateTableLayoutPanel(rows: 1, columns: 5, columnStyling: Constants.ColumnStyling.Distributed);
 
         // Initialize Buttons
+        CPHLogger.LogV("[UserConfigurationPanel] Creating Buttons.");
         _resetSettings = UIComponentFactory.CreateButton("Reset All", Constants.ButtonStyle.Default, OnResetAll);
         _importConfig = UIComponentFactory.CreateButton("Import", Constants.ButtonStyle.Default, OnImport);
         _exportConfig = UIComponentFactory.CreateButton("Export", Constants.ButtonStyle.Default, OnExport);
@@ -215,13 +226,13 @@ public class UserConfigurationPanel : UserControl
         buttonTable.Controls.Add(_testConfig, 3, 0);
         buttonTable.Controls.Add(_aboutApplication, 4, 0);
 
-
         // Add TableLayoutPanel to GroupBox
         CPHLogger.LogV("[AddUserConfigurationControlls] Adding TableLayoutPanel to GroupBox.");
         configurationGroupBox.Controls.Add(buttonTable);
 
         // Add GroupBox to UserControl
         Controls.Add(configurationGroupBox);     
+        CPHLogger.LogC("[E]UserConfigurationPanel.");
     }
 
     protected virtual void OnResetAll(object sender, EventArgs e)
@@ -282,43 +293,46 @@ public class SelectItemsPanel : UserControl
     /// <param name="items">List of initial items to populate the ListBox.</param>
     public SelectItemsPanel(string sectionTitle, List<string> items)
     {
-        // Create a GroupBox to 
+
+        CPHLogger.LogC("[S]SelectItemsPanel. Creating Groupbox and Table");
         var itemsGroupBox = UIComponentFactory.CreateGroupBox(sectionTitle);
         var layoutTable = UIComponentFactory.CreateTableLayoutPanel(2, 1);
 
-        // Initialize the ListBox and populate it with initial items.
+        CPHLogger.LogC("SelectItemsPanel. Creating and populating item box");
         _itemsListBox = UIComponentFactory.CreateListBox();
         foreach (var item in items)
         {
             _itemsListBox.Items.Add(item);
         }
 
-        // Attach a centralized selection change event handler.
-        //_itemsListBox.SelectedIndexChanged += (s, e) => ListBoxEventHandler.OnListBoxIndexChanged(s, e, sectionTitle);
-
         // Create navigation buttons (Move Up and Move Down) for the ListBox.
+        CPHLogger.LogC("SelectItemsPanel. Creating navigation buttons panel");
         _navigationPanel = UIComponentFactory.CreateListBoxNavigation(_itemsListBox, sectionTitle);
 
-        // Create Add and Remove buttons with event handlers.
+        CPHLogger.LogC("[S]SelectItemsPanel. Creating main buttons.");
         _buttonPanel = UIComponentFactory.CreateFlowLayoutPanel();
         _addBtn = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Default, OnAddAction);
         _removeBtn = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Default, (s, e) => ListBoxEventHandler.RemoveSelectedItem(_itemsListBox, sectionTitle));
-
-        // Add default buttons
+        
+        CPHLogger.LogC("SelectItemsPanel. Adding main buttons. .");
         _buttonPanel.Controls.Add(_addBtn);
         _buttonPanel.Controls.Add(_removeBtn);
-
-        // Allow derived classes to add custom buttons
+        CPHLogger.LogC("SelectItemsPanel. Adding custom buttons. .");
         AddCustomButtons();
 
         // Add controls to the layout table.
+        CPHLogger.LogC("SelectItemsPanel. Adding elements to table.");
         layoutTable.Controls.Add(_itemsListBox, 0, 0); // First cell: ListBox
         layoutTable.Controls.Add(_buttonPanel, 1, 0);   // Second cell: Button Panel
         layoutTable.Controls.Add(_navigationPanel, 0, 1); // Navigation Panel under ListBox
 
         // Add the layout table to the GroupBox and the GroupBox to the UserControl.
+        CPHLogger.LogC("SelectItemsPanel. Adding table to group");
         itemsGroupBox.Controls.Add(layoutTable);
+
+        CPHLogger.LogC("SelectItemsPanel. group box to controls");
         Controls.Add(itemsGroupBox);
+        CPHLogger.LogC("[E]SelectItemsPanel.");
     }
 
     /// <summary>
@@ -326,7 +340,7 @@ public class SelectItemsPanel : UserControl
     /// </summary>
     protected virtual void AddCustomButtons()
     {
-        // Intentionally left empty, to be overridden by derived classes.
+
     }
 
     /// <summary>
@@ -335,7 +349,7 @@ public class SelectItemsPanel : UserControl
     /// </summary>
     protected virtual void OnAddAction(object sender, EventArgs e)
     {
-        using (var dialog = new PathInputDialog(this))
+        using (var dialog = new PathInputDialog(FindForm()))
         {
             if (dialog.ShowDialog(this) == DialogResult.OK)
             {
@@ -364,28 +378,53 @@ public class SelectApplicationsPanel : SelectItemsPanel
     /// </summary>
     /// <param name="sectionTitle">Title of the panel.</param>
     /// <param name="applications">List of applications to populate the panel.</param>
-    public SelectApplicationsPanel(string sectionTitle, List<ApplicationConfig> applications)
-        : base(sectionTitle, applications.ConvertAll(app => app.Path))
+    public SelectApplicationsPanel(string sectionTitle, List<ApplicationDetails> applications)
+        : base(sectionTitle, applications?.Select(app => $"{app.FileName} ({app.Index})").ToList() ?? new List<string>())
     {
+        if (applications == null)
+        {
+            applications = new List<ApplicationDetails>();
+            CPHLogger.LogW("Applications list was null. Initialized with an empty list.");
+        }
+
         // Initialize Add Path button during construction
-        _addPathBtn = UIComponentFactory.CreateButton(
-            "Add Path",
-            Constants.ButtonStyle.Default,
-            OnAddPathAction
-        );
+        CPHLogger.LogC("[S]SelectApplicationsPanel - Applications Add path button");
+        // _addPathBtn = UIComponentFactory.CreateButton(
+        //     "Add Path",
+        //     Constants.ButtonStyle.Default,
+        //     OnAddPathAction
+        // );
 
         // Add custom buttons during initialization
-        AddCustomButtons();
+        //AddCustomButtons();
     }
+
 
     /// <summary>
     /// Overrides the base method to add an "Add Path" button to the control panel.
     /// </summary>
-    protected override void AddCustomButtons()
-    {
-        _buttonPanel.Controls.Add(_addPathBtn);
-        _buttonPanel.Controls.SetChildIndex(_addPathBtn, 1); // Place after the "Add" button
-    }
+    // protected override void AddCustomButtons()
+    // {
+    //     // Ensure _addPathBtn is added correctly
+    //     if (!_buttonPanel.Controls.Contains(_addPathBtn))
+    //     {
+    //         _buttonPanel.Controls.Add(_addPathBtn);
+    //         CPHLogger.LogV("Added _addPathBtn to _buttonPanel");
+    //     }
+
+    //     // Verify the index
+    //     int desiredIndex = 1; // After "Add" button
+    //     if (_buttonPanel.Controls.Count > desiredIndex)
+    //     {
+    //         _buttonPanel.Controls.SetChildIndex(_addPathBtn, desiredIndex);
+    //         CPHLogger.LogV($"_addPathBtn moved to index {desiredIndex} in _buttonPanel");
+    //     }
+    //     else
+    //     {
+    //         CPHLogger.LogW($"Unable to set child index for _addPathBtn. Index {desiredIndex} is out of range.");
+    //     }
+    // }
+
 
     /// <summary>
     /// Handles the "Add Path" button click event.
@@ -401,21 +440,23 @@ public class SelectApplicationsPanel : SelectItemsPanel
             if (folderDialog.ShowDialog() == DialogResult.OK)
             {
                 string selectedPath = folderDialog.SelectedPath;
+                string fileName = Path.GetFileName(selectedPath);
 
-                // Prevent duplicate entries
-                if (!_itemsListBox.Items.Contains(selectedPath))
+                // Check for duplicates
+                if (!_itemsListBox.Items.Contains(fileName))
                 {
-                    _itemsListBox.Items.Add(selectedPath);
-                    CPHLogger.LogI($"Application path added: {selectedPath}");
-                    MessageBox.Show($"Application path added:\n{selectedPath}", 
+                    var newApp = new ApplicationDetails(selectedPath, _itemsListBox.Items.Count);
+                    _itemsListBox.Items.Add(newApp);
+                    CPHLogger.LogI($"Application added: {newApp.FileName} at index {newApp.Index}");
+                    MessageBox.Show($"Application added:\n{newApp.FileName}", 
                         "Path Added", 
                         MessageBoxButtons.OK, 
                         MessageBoxIcon.Information);
                 }
                 else
                 {
-                    CPHLogger.LogW($"Duplicate application path detected: {selectedPath}");
-                    MessageBox.Show("This application path has already been added.", 
+                    CPHLogger.LogW($"Duplicate application detected: {fileName}");
+                    MessageBox.Show("This application has already been added.", 
                         "Duplicate Path", 
                         MessageBoxButtons.OK, 
                         MessageBoxIcon.Warning);
@@ -423,6 +464,7 @@ public class SelectApplicationsPanel : SelectItemsPanel
             }
         }
     }
+
 }
 
 
@@ -1122,13 +1164,13 @@ public class ApplicationDetails
 {
     public string FileName { get; set; }
     public string FullPath { get; set; }
-    public int Index { get; set; } // New property to store the index
+    public int Index { get; set; }
 
     public ApplicationDetails(string fullPath, int index)
     {
         FullPath = fullPath;
         FileName = Path.GetFileName(fullPath);
-        Index = index; // Initialize the index
+        Index = index;
     }
 
     public override string ToString()
@@ -1242,6 +1284,8 @@ public class CPHLogger : SB
         CPH.LogError($"[ERROR] {message}");
         return false;
     }
+
+    public static void LogC(string message) => CPH.LogDebug($"[Checkpoint] {message}");
 
 
     // Prebuilt Logging Methods. 

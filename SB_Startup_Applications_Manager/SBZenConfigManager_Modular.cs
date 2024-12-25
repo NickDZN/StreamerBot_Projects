@@ -91,7 +91,7 @@ public class CPHInline
                     {
                         // Create a new instance of the form if it doesn't already exist
                         CPHLogger.LogD("Loading a new form.");
-                        mainFormInstance = new LoadStartupConfigForm(normalizedWindowRect, actionList);
+                        mainFormInstance = new LoadStartupConfigForm(normalizedWindowRect);
                         // Apply normalized position
                         CPHLogger.LogI($"Applying normalized rectangle: {normalizedWindowRect}");
                         mainFormInstance.StartPosition = FormStartPosition.Manual;
@@ -169,68 +169,89 @@ public class LoadStartupConfigForm : Form
     private readonly SelectApplicationsPanel _permittedStartupApplicationsSection; // Applications panel
     private readonly SelectActionsPanel _permittedActionsSection; // Allowed actions panel
     private readonly SelectActionsPanel _blockedActionsSection; // Blocked actions panel
-    private readonly StartupBehaviorControlPanel _startupBehaviorControl; // Startup behavior settings
+    //private readonly ApplicationStartupBehaviorControlPanel _startupBehaviorControl; // Startup behavior settings
+    //private readonly ActionStartupBehaviorControlPanel _startupBehaviorControl2; // Startup behavior settings
     private readonly FormsControlPanel _formFlowControls; // General form controls
-    private readonly List<ActionData> actionDataList;
+
+    private readonly StartupBehaviorControlPanel _startupBehaviorControl;
+    private readonly StartupBehaviorControlPanel _startupBehaviorControl2;
+
+
+
+
     /// <summary>
     /// Initializes the configuration form with active window dimensions and action data.
     /// </summary>
     /// <param name = "activeWindowRect">Screen rectangle for positioning the form.</param>
-    /// <param name = "actions">List of actions to populate permitted and blocked sections.</param>
-    public LoadStartupConfigForm(Rectangle activeWindowRect, List<ActionData> actions)
+    public LoadStartupConfigForm(Rectangle activeWindowRect)
     {
         CPHLogger.LogC("[S]LoadStartupConfigForm.");
         SetFormProperties(this);
-        // Create the core layout panel for organizing all sections
+        
+        // Core layout panel for organizing all sections
         CPHLogger.LogC("Creating Table Layout");
-        var coreLayoutPanelForForm = UIComponentFactory.CreateTableLayoutPanel(rows: 6, columns: 1);
-        // 🧩 User Configuration Panel
+        var coreLayoutPanelForForm = UIComponentFactory.CreateTableLayoutPanel(rows: 7, columns: 1);
+
+        //  User Configuration Panel
         CPHLogger.LogC("Creating _userConfigurationControls");
         _userConfigurationControls = new UserConfigurationPanel();
         coreLayoutPanelForForm.Controls.Add(_userConfigurationControls, 0, 0);
-        // 🧩 Applications Panel
+        
+        // Startup Applications Panel
         CPHLogger.LogC("Creating _permittedStartupApplicationsSection");
         _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationDetails>());
         coreLayoutPanelForForm.Controls.Add(_permittedStartupApplicationsSection, 0, 1);
-        // 🧩 Permitted Actions Panel
-        CPHLogger.LogC("Creating _permittedActionsSection");
-        _permittedActionsSection = new SelectActionsPanel("Permitted Actions", actions);
-        coreLayoutPanelForForm.Controls.Add(_permittedActionsSection, 0, 2);
-        // 🧩 Blocked Actions Panel
-        CPHLogger.LogC("Creating _blockedActionsSection");
-        _blockedActionsSection = new SelectActionsPanel("Blocked Actions", actions);
-        coreLayoutPanelForForm.Controls.Add(_blockedActionsSection, 0, 3);
-        // 🧩 Startup Behavior Control Panel
+
+        // Startup Behavior Control Panel
         CPHLogger.LogC("Creating _startupBehaviorControl");
-        _startupBehaviorControl = new StartupBehaviorControlPanel();
-        coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl, 0, 4);
+        _startupBehaviorControl = new StartupBehaviorControlPanel(StartupBehaviorControlPanel.StartupBehaviorType.Application);
+        coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl, 0, 2);
+
+        // Permitted Actions Panel
+        CPHLogger.LogC("Creating _permittedActionsSection");
+        _permittedActionsSection = new SelectActionsPanel("Permitted Actions", new List<ActionConfig>());
+        coreLayoutPanelForForm.Controls.Add(_permittedActionsSection, 0, 3);
+        
+        // Blocked Actions Panel
+        CPHLogger.LogC("Creating _blockedActionsSection");
+        _blockedActionsSection = new SelectActionsPanel("Blocked Actions", new List<ActionConfig>());
+        coreLayoutPanelForForm.Controls.Add(_blockedActionsSection, 0, 4);
+        
+        // Startup Behavior Control Panel
+        CPHLogger.LogC("Creating _startupBehaviorControl");
+        _startupBehaviorControl2 = new StartupBehaviorControlPanel(StartupBehaviorControlPanel.StartupBehaviorType.Action);
+        coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl2, 0, 5);
+        
         // 🧩 Form Flow Controls Panel
         CPHLogger.LogC("Creating _formFlowControls");
         _formFlowControls = new FormsControlPanel();
-        coreLayoutPanelForForm.Controls.Add(_formFlowControls, 0, 5);
+        coreLayoutPanelForForm.Controls.Add(_formFlowControls, 0, 6);
+        
         // Add the core layout panel to the form
         CPHLogger.LogC("Adding coreLayoutPanelForForm to Controls.");
         Controls.Add(coreLayoutPanelForForm);
+
         SuspendLayout();
         ResumeLayout();
         CPHLogger.LogAll(this);
         CPHLogger.logRectDetails(activeWindowRect);
     }
 
-    /// <summary>
-    /// Sets the default properties for the form.
-    /// </summary>
-    /// <param name = "form">The target form object.</param>
-    private void SetFormProperties(Form form)
-    {
-        CPHLogger.LogC("[S]SetFormProps.");
-        form.Text = Constants.FormName;
-        //form.BackColor = Constants.FormColour;
-        form.Font = new Font("Segoe UI", 10);
-        form.FormBorderStyle = FormBorderStyle.FixedDialog;
-        form.AutoSize = true;
-        CPHLogger.LogC("[E]SetFormProps.");
-    }
+/// <summary>
+/// Sets the default properties for the form.
+/// </summary>
+/// <param name = "form">The target form object.</param>
+private void SetFormProperties(Form form)
+{
+    CPHLogger.LogC("[S]SetFormProps.");
+    form.Text = Constants.FormName;
+    //form.BackColor = Constants.FormColour;
+    form.Font = new Font("Segoe UI", 10);
+    //form.FormBorderStyle = FormBorderStyle.FixedDialog;
+    form.AutoSize = true;
+    CPHLogger.LogC("[E]SetFormProps.");
+}
+
 }
 
 public class UserConfigurationPanel : BaseConfigurationPanel
@@ -240,11 +261,13 @@ public class UserConfigurationPanel : BaseConfigurationPanel
     protected readonly Button _exportConfig;
     protected readonly Button _testConfig;
     protected readonly Button _aboutApplication;
+
     public UserConfigurationPanel()
     {
         CPHLogger.LogC("[S]UserConfigurationPanel.");
         var configurationGroupBox = UIComponentFactory.CreateGroupBox("Manage your configuration");
         var buttonTable = UIComponentFactory.CreateTableLayoutPanel(rows: 1, columns: 5, columnStyling: Constants.ColumnStyling.Distributed);
+        
         // Initialize Buttons
         CPHLogger.LogV("[UserConfigurationPanel] Creating Buttons.");
         _resetSettings = UIComponentFactory.CreateButton("Reset All", Constants.ButtonStyle.Default, OnResetAll);
@@ -252,15 +275,18 @@ public class UserConfigurationPanel : BaseConfigurationPanel
         _exportConfig = UIComponentFactory.CreateButton("Export", Constants.ButtonStyle.Default, OnExport);
         _testConfig = UIComponentFactory.CreateButton("Test Config", Constants.ButtonStyle.Default, OnTestConfig);
         _aboutApplication = UIComponentFactory.CreateButton("About", Constants.ButtonStyle.Default, OnAbout);
+        
         // Add buttons to the TableLayoutPanel
         buttonTable.Controls.Add(_resetSettings, 0, 0);
         buttonTable.Controls.Add(_importConfig, 1, 0);
         buttonTable.Controls.Add(_exportConfig, 2, 0);
         buttonTable.Controls.Add(_testConfig, 3, 0);
         buttonTable.Controls.Add(_aboutApplication, 4, 0);
+        
         // Add TableLayoutPanel to GroupBox
         CPHLogger.LogV("[AddUserConfigurationControlls] Adding TableLayoutPanel to GroupBox.");
         configurationGroupBox.Controls.Add(buttonTable);
+        
         // Add GroupBox to UserControl
         Controls.Add(configurationGroupBox);
         CPHLogger.LogC("[E]UserConfigurationPanel.");
@@ -427,14 +453,37 @@ public class SelectActionsPanel : SelectItemsPanel
     /// </summary>
     /// <param name = "sectionTitle">The title displayed on the panel (e.g., "Permitted Actions").</param>
     /// <param name = "actions">A list of actions to populate the ListBox with.</param>
-    public SelectActionsPanel(string sectionTitle, List<ActionData> actions) // Calls the base class constructor (SelectItemsPanel) to initialize shared components.
+    public SelectActionsPanel(string sectionTitle, List<ActionConfig> actions) // Calls the base class constructor (SelectItemsPanel) to initialize shared components.
     // Converts the list of ActionData objects to a list of their names (strings) for display.
-    : base(sectionTitle, actions.ConvertAll(action => action.Name))
+    : base(sectionTitle, actions?.Select(actions => $"{actions.Name} ({actions.Order})").ToList() ?? new List<string>(), rows: 2, cols: 2)
     {
-        // No Customer Additions Required. 
+        if (actions == null)
+        {
+            actions = new List<ActionConfig>();
+            CPHLogger.LogW($"{sectionTitle} Actions list was null. Initialized with an empty list.");
+        }                 
+
+        // Update TableLayoutPanel row/column styles
+        _layoutTable.RowStyles.Clear();
+        _layoutTable.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _layoutTable.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _layoutTable.ColumnStyles.Clear();
+        _layoutTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _layoutTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        // Adjust ListBox to span across the top row
+        _layoutTable.SetColumnSpan(_itemsListBox, 2);
+        _layoutTable.SetRowSpan(_itemsListBox, 1);
+
+        // Add the button panel to the second row, first column
+        _layoutTable.Controls.Add(_buttonPanel, 0, 1);
+        // Add navigation panel to the second row, second column
+        _layoutTable.Controls.Add(_navigationPanel, 1, 1);
+        CPHLogger.LogC("[E]SelectApplicationsPanel: Layout updated successfully");
     }
 
-                            (string sectionTitle, List<ApplicationDetails> applications) : base(sectionTitle, applications?.Select(app => $"{app.FileName} ({app.Index})").ToList() ?? new List<string>(), rows: 2, cols: 2)
+
+
 
 
     protected override void OnAddAction(object sender, EventArgs e)
@@ -445,64 +494,225 @@ public class SelectActionsPanel : SelectItemsPanel
 
 
 /// <summary>
-/// Panel for configuring startup behavior with selectable options.
+/// A unified panel for configuring startup behavior, supporting both Applications and Actions.
 /// </summary>
 public class StartupBehaviorControlPanel : BaseConfigurationPanel
 {
-    // Controls
-    private readonly ComboBox _startupOptionComboBox; // Dropdown for startup options
-    private readonly Label _startupLabel; // Label for clarity
+    private readonly ComboBox _startupOptionComboBox; // Dropdown for Yes/No/Prompt
+    private readonly NumericUpDown _delayNumericUpDown; // Numeric selector for delay
+    private readonly ComboBox _blockingOptionComboBox; // Dropdown for Blocking Yes/No
+    private readonly Label _startupLabel; // Label for startup dropdown
+    private readonly Label _delayLabel; // Label for delay
+    private readonly Label _blockingLabel; // Label for blocking dropdown
+
+    private readonly string _sectionTitle;
+
+    public enum StartupBehaviorType
+    {
+        Application,
+        Action
+    }
+
+
     /// <summary>
     /// Initializes the Startup Behavior Control Panel.
     /// </summary>
-    public StartupBehaviorControlPanel()
+    /// <param name="type">Specifies whether this panel is for Applications or Actions.</param>
+    public StartupBehaviorControlPanel(StartupBehaviorType type)
     {
-        // Create the layout
-        var layout = UIComponentFactory.CreateTableLayoutPanel(1, 3);
-        // Create label
-        _startupLabel = UIComponentFactory.CreateLabel("Startup Behavior:");
-        // Create ComboBox with options
-        _startupOptionComboBox = UIComponentFactory.CreateComboBox(new List<string> { "Yes", "No", "Prompt" });
+        _sectionTitle = type == StartupBehaviorType.Application ? "Application Startup Behavior" : "Action Startup Behavior";
+
+        CPHLogger.LogC($"[S]StartupBehaviorControlPanel: Initializing {_sectionTitle}");
+
+        var startupGroupBox = UIComponentFactory.CreateGroupBox(_sectionTitle);
+
+        var layout = UIComponentFactory.CreateTableLayoutPanel(
+            rows: 1,
+            columns: 6,
+            columnStyling: Constants.ColumnStyling.Default
+        );
+
+        // Startup Option
+        _startupLabel = UIComponentFactory.CreateLabel("Auto Launch:");
+        _startupOptionComboBox = UIComponentFactory.CreateComboBox(
+            new List<string> { "On", "Off", "Prompt" },
+            defaultSelectedIndex: 0,
+            widthParam: 75
+        );
         _startupOptionComboBox.SelectedIndexChanged += OnStartupOptionChanged;
-        // Add controls to layout
-        layout.Controls.Add(_startupLabel, 0, 0); // Add Label to first column
-        layout.Controls.Add(_startupOptionComboBox, 1, 0); // Add ComboBox to second column
-        // Add layout to UserControl
-        Controls.Add(layout);
+
+        // Delay Option
+        _delayLabel = UIComponentFactory.CreateLabel("Delay (seconds):");
+        _delayNumericUpDown = UIComponentFactory.CreateNumericUpDown(
+            width: 40,
+            minimum: 0,
+            maximum: 15,
+            defaultValue: 2
+        );
+        _delayNumericUpDown.ValueChanged += OnDelayValueChanged;
+
+        // Blocking Option
+        _blockingLabel = UIComponentFactory.CreateLabel("Blocking:");
+        _blockingOptionComboBox = UIComponentFactory.CreateComboBox(
+            new List<string> { "Yes", "No" },
+            defaultSelectedIndex: 1,
+            widthParam: 50
+        );
+        _blockingOptionComboBox.SelectedIndexChanged += OnBlockingOptionChanged;
+
+        // Add controls to the layout
+        layout.Controls.Add(_startupLabel, 0, 0);
+        layout.Controls.Add(_startupOptionComboBox, 1, 0);
+        layout.Controls.Add(_delayLabel, 2, 0);
+        layout.Controls.Add(_delayNumericUpDown, 3, 0);
+        layout.Controls.Add(_blockingLabel, 4, 0);
+        layout.Controls.Add(_blockingOptionComboBox, 5, 0);
+
+        startupGroupBox.Controls.Add(layout);
+        Controls.Add(startupGroupBox);
+
+        CPHLogger.LogC($"[E]StartupBehaviorControlPanel: {_sectionTitle} Initialized successfully");
     }
 
     /// <summary>
-    /// Handles changes in the ComboBox selection.
+    /// Handles changes in the Startup dropdown.
     /// </summary>
     private void OnStartupOptionChanged(object sender, EventArgs e)
     {
         if (_startupOptionComboBox.SelectedItem != null)
         {
             string selectedOption = _startupOptionComboBox.SelectedItem.ToString();
-            CPHLogger.LogI($"Startup option changed to: {selectedOption}");
-            // Display a user-friendly message
-            MessageBox.Show($"Startup option changed to: {selectedOption}", "Startup Behavior Changed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            CPHLogger.LogI($"[{_sectionTitle}] Startup option changed to: {selectedOption}");
+            MessageBox.Show($"[{_sectionTitle}] Startup option changed to: {selectedOption}", "Startup Behavior", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+
+    /// <summary>
+    /// Handles changes in the Delay numeric control.
+    /// </summary>
+    private void OnDelayValueChanged(object sender, EventArgs e)
+    {
+        int delay = (int)_delayNumericUpDown.Value;
+        CPHLogger.LogI($"[{_sectionTitle}] Startup delay set to: {delay} seconds");
+        MessageBox.Show($"[{_sectionTitle}] Startup delay set to: {delay} seconds", "Startup Behavior", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    /// <summary>
+    /// Handles changes in the Blocking dropdown.
+    /// </summary>
+    private void OnBlockingOptionChanged(object sender, EventArgs e)
+    {
+        if (_blockingOptionComboBox.SelectedItem != null)
+        {
+            string selectedOption = _blockingOptionComboBox.SelectedItem.ToString();
+            CPHLogger.LogI($"[{_sectionTitle}] Blocking option changed to: {selectedOption}");
+            MessageBox.Show($"[{_sectionTitle}] Blocking option changed to: {selectedOption}", "Blocking Behavior", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
 
+
+// public class FormsControlPanel : BaseConfigurationPanel
+// {
+    
+//     public FormsControlPanel()
+//     {
+
+//         var coreLayoutPanelForForm = UIComponentFactory.CreateTableLayoutPanel(rows: 7, columns: 1);
+
+
+//         var flowControlButtonPanel = UIComponentFactory.CreateFlowLayoutPanel(autoSize: true, wrapContents: false, anchor: AnchorStyles.Top);
+//         // Save Button
+//         var saveButton = UIComponentFactory.CreateButton("Save", Constants.ButtonStyle.FlowControl, (s, e) => MessageBox.Show("Configuration Saved!"));
+//         // Close Button
+//         var closeButton = UIComponentFactory.CreateButton("Close", Constants.ButtonStyle.FlowControl, (s, e) => Application.Exit());
+//         // Add Buttons
+//         flowControlButtonPanel.Controls.Add(saveButton);
+//         flowControlButtonPanel.Controls.Add(closeButton);
+
+//         // Add FlowControl Panel to UserControl
+//         Controls.Add(flowControlButtonPanel);
+//     }
+// }
+
+
+/// <summary>
+/// Panel containing flow control buttons (e.g., Save, Close), centralized and resizable.
+/// </summary>
 public class FormsControlPanel : BaseConfigurationPanel
 {
+    private TableLayoutPanel _mainLayoutPanel; // Main layout to centralize the flow control panel
+    private FlowLayoutPanel _flowControlButtonPanel; // Holds Save and Close buttons
 
+    /// <summary>
+    /// Initializes the FormsControlPanel with centralized Save and Close buttons.
+    /// </summary>
     public FormsControlPanel()
     {
-        var flowControlButtonPanel = UIComponentFactory.CreateFlowLayoutPanel(autoSize: true, wrapContents: false, anchor: AnchorStyles.None);
-        // Save Button
-        var saveButton = UIComponentFactory.CreateButton("Save", Constants.ButtonStyle.FlowControl, (s, e) => MessageBox.Show("Configuration Saved!"));
-        // Close Button
-        var closeButton = UIComponentFactory.CreateButton("Close", Constants.ButtonStyle.FlowControl, (s, e) => Application.Exit());
-        // Add Buttons
-        flowControlButtonPanel.Controls.Add(saveButton);
-        flowControlButtonPanel.Controls.Add(closeButton);
-        // Add FlowControl Panel to UserControl
-        Controls.Add(flowControlButtonPanel);
+        CPHLogger.LogC("[S] FormsControlPanel: Initializing");
+
+        // Create the main layout panel to centralize the flow control panel
+        _mainLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, // Fill the parent control
+            ColumnCount = 1, // Single column for central alignment
+            RowCount = 1,    // Single row for flexibility
+            AutoSize = true, // Adjust size based on content
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Constants.Surface,
+            Padding = new Padding(2), // Inner spacing
+            Margin = new Padding(0)    // Outer spacing
+        };
+
+        // Define row and column styles for better alignment
+        _mainLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        _mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+        // Create the FlowControl Panel for buttons
+        _flowControlButtonPanel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight, // Horizontal layout for buttons
+            WrapContents = false,                     // Prevent wrapping
+            AutoSize = true,                           // Adjust size dynamically
+            AutoSizeMode = AutoSizeMode.GrowAndShrink, // Grow and shrink based on content
+            Anchor = AnchorStyles.None,               // Centered explicitly
+            Padding = new Padding(2),                 // Inner spacing between buttons
+            BackColor = Constants.Surface
+        };
+
+        // Add Save Button
+        var saveButton = UIComponentFactory.CreateButton(
+            "Save",
+            Constants.ButtonStyle.FlowControl,
+            (s, e) => MessageBox.Show("Configuration Saved!")
+        );
+
+        // Add Close Button
+        var closeButton = UIComponentFactory.CreateButton(
+            "Close",
+            Constants.ButtonStyle.FlowControl,
+            (s, e) => Application.Exit()
+        );
+
+        // Add buttons to the flow panel
+        _flowControlButtonPanel.Controls.Add(saveButton);
+        _flowControlButtonPanel.Controls.Add(closeButton);
+
+        // Add the flow panel to the central cell of the main layout
+        _mainLayoutPanel.Controls.Add(_flowControlButtonPanel, 0, 0);
+        _mainLayoutPanel.SetCellPosition(_flowControlButtonPanel, new TableLayoutPanelCellPosition(0, 0));
+        _mainLayoutPanel.SetColumnSpan(_flowControlButtonPanel, 1);
+        _mainLayoutPanel.SetRowSpan(_flowControlButtonPanel, 1);
+
+        // Add the main layout to the panel
+        Controls.Add(_mainLayoutPanel);
+
+        CPHLogger.LogC("[E] FormsControlPanel: Successfully Initialized with TableLayoutPanel & FlowLayoutPanel");
     }
 }
+
+
+
 
 
 
@@ -740,8 +950,8 @@ public class UIComponentFactory
             AutoSize = true,
             Dock = DockStyle.Fill,
             TextAlign = textAlign,
-            Margin = margin ?? new Padding(5),
-            Padding = padding ?? new Padding(5),
+            Margin = margin ?? new Padding(2, 0, 2, 0),
+            Padding = padding ?? new Padding(1, 1, 1, 1),
         };
         CPHLogger.LogV($"Label created. Properties: Text=\"{label.Text}\", AutoSize={label.AutoSize}, Dock={label.Dock}, TextAlign={label.TextAlign}, " + $"Margin={label.Margin}, Padding={label.Padding}");
         return label;
@@ -927,18 +1137,20 @@ public class UIComponentFactory
     /// <param name = "isDropDownList">If true, the ComboBox will be in DropDownList mode (prevents free text input).</param>
     /// <param name = "defaultSelectedIndex">The default selected index (if any).</param>
     /// <returns>A styled ComboBox control.</returns>
-    public static ComboBox CreateComboBox(List<string> items, bool isDropDownList = true, int defaultSelectedIndex = 0)
+    public static ComboBox CreateComboBox(List<string> items, bool isDropDownList = true, int defaultSelectedIndex = 0, int? widthParam = null)
     {
         // Initialize the ComboBox
         var comboBox = new ComboBox
         {
-            Dock = DockStyle.Fill, // Fills its container
-            DropDownStyle = isDropDownList ? ComboBoxStyle.DropDownList : ComboBoxStyle.DropDown, // DropDownList restricts selection to predefined items
-            Margin = new Padding(5), // Adds consistent spacing
-            Font = new Font("Segoe UI", 10), // Standard font
-            ForeColor = Constants.PrimaryText, // Text color
-            BackColor = Constants.Surface // Background color
+            Dock = DockStyle.Fill,
+            DropDownStyle = isDropDownList ? ComboBoxStyle.DropDownList : ComboBoxStyle.DropDown,
+            Margin = new Padding(5),
+            Font = new Font("Segoe UI", 10),
+            ForeColor = Constants.PrimaryText,
+            BackColor = Constants.Surface,
+            Width = widthParam ?? 150 // Default width is 150 if not specified
         };
+
         // Add items to the ComboBox
         if (items != null && items.Count > 0)
         {
@@ -1088,28 +1300,19 @@ public static class Constants
     public const string ExecutableFilter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
     public const string SettingsFileName = "settings.json";
     public const string FormName = "SBZen Config Manager";
+
     //Colours
-    public static readonly Color FormColour = ColorTranslator.FromHtml("#FFFFFF");
-    public static readonly Color PrimaryText = ColorTranslator.FromHtml("#000000");
+    public static readonly Color FormColour = ColorTranslator.FromHtml("#151515");
+    public static readonly Color PrimaryText = ColorTranslator.FromHtml("#FFFFFF");
     public static readonly Color SecondaryText = ColorTranslator.FromHtml("#B0B0B0");
-    public static readonly Color Accent = ColorTranslator.FromHtml("#FFFFFF");
-    public static readonly Color Surface = ColorTranslator.FromHtml("#FFFFFF");
-    public static readonly Color Border = ColorTranslator.FromHtml("#000000");
+    public static readonly Color Accent = ColorTranslator.FromHtml("#BB86FC");
+    public static readonly Color Surface = ColorTranslator.FromHtml("#2A313E");
+    public static readonly Color Border = ColorTranslator.FromHtml("#373737");
     public static readonly Color BtnBG = ColorTranslator.FromHtml("#1E1E1E");
     public static readonly Color BtnText = ColorTranslator.FromHtml("#FFFFFF");
     public static readonly Color PrimaryBtnBG = ColorTranslator.FromHtml("#0F40A9");
     public static readonly Color PrimaryBtnText = ColorTranslator.FromHtml("#FFFFFF");
-    //Colours
-    // public static readonly Color FormColour = ColorTranslator.FromHtml("#151515");
-    // public static readonly Color PrimaryText = ColorTranslator.FromHtml("#FFFFFF");
-    // public static readonly Color SecondaryText = ColorTranslator.FromHtml("#B0B0B0");
-    // public static readonly Color Accent = ColorTranslator.FromHtml("#BB86FC");
-    // public static readonly Color Surface = ColorTranslator.FromHtml("#2A313E");
-    // public static readonly Color Border = ColorTranslator.FromHtml("#373737");
-    // public static readonly Color BtnBG = ColorTranslator.FromHtml("#1E1E1E");
-    // public static readonly Color BtnText = ColorTranslator.FromHtml("#FFFFFF");
-    // public static readonly Color PrimaryBtnBG = ColorTranslator.FromHtml("#0F40A9");
-    // public static readonly Color PrimaryBtnText = ColorTranslator.FromHtml("#FFFFFF");
+    
     //Enums    
     public enum StartupMode
     {
@@ -1140,6 +1343,14 @@ public static class Constants
         Distributed,
         Custom,
     }
+
+    public enum StartupBehaviorType
+    {
+        Application,
+        Action
+    }
+
+
 }
 
 /// <summary>
@@ -1358,21 +1569,26 @@ public class SelectItemsPanel : BaseConfigurationPanel
 
         // Initialize Button Panel and buttons
         CPHLogger.LogC("SelectItemsPanel: Creating Button Panel");
-        _buttonPanel = UIComponentFactory.CreateFlowLayoutPanel();
+        _buttonPanel = UIComponentFactory.CreateFlowLayoutPanel(direction: FlowDirection.LeftToRight, wrapContents: false, autoSize: true, anchor: AnchorStyles.Top | AnchorStyles.Left);
+        
         _addBtn = UIComponentFactory.CreateButton("Add", Constants.ButtonStyle.Longer, OnAddAction);
         _removeBtn = UIComponentFactory.CreateButton("Remove", Constants.ButtonStyle.Longer, (s, e) => ListBoxEventHandler.RemoveSelectedItem(_itemsListBox, sectionTitle));
         _buttonPanel.Controls.Add(_addBtn);
         _buttonPanel.Controls.Add(_removeBtn);
+        
         // Initialize Navigation Panel for Move Up/Down buttons
         CPHLogger.LogC("SelectItemsPanel: Creating Navigation Panel");
         _navigationPanel = UIComponentFactory.CreateListBoxNavigation(_itemsListBox, sectionTitle);
+        
         // Add components to the TableLayoutPanel
         CPHLogger.LogC("SelectItemsPanel: Adding controls to layout table");
         _layoutTable.Controls.Add(_itemsListBox, 0, 0); // ListBox in first row
         _layoutTable.Controls.Add(_buttonPanel, 0, 1); // Button Panel in second row
         _layoutTable.Controls.Add(_navigationPanel, 0, 2); // Navigation Panel in third row
+        
         // Add the TableLayoutPanel to the GroupBox
         itemsGroupBox.Controls.Add(_layoutTable);
+        
         // Add the GroupBox to the UserControl
         Controls.Add(itemsGroupBox);
         CPHLogger.LogC("[E]SelectItemsPanel: Constructor");

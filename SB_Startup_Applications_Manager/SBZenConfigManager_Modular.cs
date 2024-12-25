@@ -166,17 +166,12 @@ public class LoadStartupConfigForm : Form
 {
     // Panel Controls
     private readonly UserConfigurationPanel _userConfigurationControls; // User settings and configuration controls
-    private readonly SelectApplicationsPanel _permittedStartupApplicationsSection; // Applications panel
+    private readonly SelectApplicationsPanel _startupApplicationsSection; // Applications panel
+    private readonly StartupBehaviorControlPanel _startupConfigurationApplications;
     private readonly SelectActionsPanel _permittedActionsSection; // Allowed actions panel
     private readonly SelectActionsPanel _blockedActionsSection; // Blocked actions panel
-    //private readonly ApplicationStartupBehaviorControlPanel _startupBehaviorControl; // Startup behavior settings
-    //private readonly ActionStartupBehaviorControlPanel _startupBehaviorControl2; // Startup behavior settings
+    private readonly StartupBehaviorControlPanel _startupBehaviorControlActions;
     private readonly FormsControlPanel _formFlowControls; // General form controls
-
-    private readonly StartupBehaviorControlPanel _startupBehaviorControl;
-    private readonly StartupBehaviorControlPanel _startupBehaviorControl2;
-
-
 
 
     /// <summary>
@@ -199,13 +194,13 @@ public class LoadStartupConfigForm : Form
         
         // Startup Applications Panel
         CPHLogger.LogC("Creating _permittedStartupApplicationsSection");
-        _permittedStartupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationDetails>());
-        coreLayoutPanelForForm.Controls.Add(_permittedStartupApplicationsSection, 0, 1);
+        _startupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationDetails>());
+        coreLayoutPanelForForm.Controls.Add(_startupApplicationsSection, 0, 1);
 
         // Startup Behavior Control Panel
         CPHLogger.LogC("Creating _startupBehaviorControl");
-        _startupBehaviorControl = new StartupBehaviorControlPanel(StartupBehaviorControlPanel.StartupBehaviorType.Application);
-        coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl, 0, 2);
+        _startupConfigurationApplications = new StartupBehaviorControlPanel(StartupBehaviorControlPanel.StartupBehaviorType.Application);
+        coreLayoutPanelForForm.Controls.Add(_startupConfigurationApplications, 0, 2);
 
         // Permitted Actions Panel
         CPHLogger.LogC("Creating _permittedActionsSection");
@@ -219,8 +214,8 @@ public class LoadStartupConfigForm : Form
         
         // Startup Behavior Control Panel
         CPHLogger.LogC("Creating _startupBehaviorControl");
-        _startupBehaviorControl2 = new StartupBehaviorControlPanel(StartupBehaviorControlPanel.StartupBehaviorType.Action);
-        coreLayoutPanelForForm.Controls.Add(_startupBehaviorControl2, 0, 5);
+        _startupBehaviorControlActions = new StartupBehaviorControlPanel(StartupBehaviorControlPanel.StartupBehaviorType.Action);
+        coreLayoutPanelForForm.Controls.Add(_startupBehaviorControlActions, 0, 5);
         
         // 🧩 Form Flow Controls Panel
         CPHLogger.LogC("Creating _formFlowControls");

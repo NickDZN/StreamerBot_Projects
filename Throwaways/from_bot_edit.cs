@@ -16,7 +16,6 @@ using System.Windows.Forms; // For creating Windows Forms
 public class CPHInline
 {
     private static LoadStartupConfigForm mainFormInstance = null;
-    // Importing the GetWindowRect function from user32.dll to get the dimensions of a window.
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out Rectangle lpRect);
     public bool Execute()
@@ -30,7 +29,7 @@ public class CPHInline
         }
         catch (Exception ex)
         {
-            return false;
+            return CPHLogger.LogE($"Unable to create static CPH reference: {ex.Message}\n{ex.StackTrace}");
         }
 
         try
@@ -46,8 +45,7 @@ public class CPHInline
 
             if (!GetWindowRect(currentProcess.MainWindowHandle, out Rectangle windowRect))
             {
-                int errorCode = Marshal.GetLastWin32Error();
-                CPHLogger.LogE($"Failed to retrieve the window rectangle. Error code: {errorCode}");
+                CPHLogger.LogE("Failed to retrieve the window rectangle.");
                 return false;
             }
 
@@ -124,7 +122,7 @@ public class CPHInline
         }
         catch (Exception ex)
         {
-            return false;
+            return CPHLogger.LogE($"An error occurred during execution: {ex.Message}\n{ex.StackTrace}");
         }
     }
 
@@ -159,10 +157,10 @@ public class CPHInline
 public class LoadStartupConfigForm : Form
 {
     private readonly UserConfigurationPanel _userConfigurationControls;
-    private readonly ApplicationsPanel _startupApplicationsSection;
+    private readonly SelectApplicationsPanel _startupApplicationsSection;
     private readonly StartupBehaviorControlPanel _startupConfigurationApplications;
-    private readonly ActionsPanel _permittedActionsSection;
-    private readonly ActionsPanel _blockedActionsSection;
+    private readonly SelectActionsPanel _permittedActionsSection;
+    private readonly SelectActionsPanel _blockedActionsSection;
     private readonly StartupBehaviorControlPanel _startupBehaviorControlActions;
     private readonly FormsControlPanel _formFlowControls;
 
@@ -188,7 +186,7 @@ public class LoadStartupConfigForm : Form
         
         // Startup Applications Panel
         CPHLogger.LogC("Creating _permittedStartupApplicationsSection");
-        _startupApplicationsSection = new ApplicationsPanel("Permitted Applications", new List<ApplicationDetails>());
+        _startupApplicationsSection = new SelectApplicationsPanel("Permitted Applications", new List<ApplicationDetails>());
         coreLayoutPanelForForm.Controls.Add(_startupApplicationsSection, 0, 1);
 
         // Startup Behavior Control Panel
@@ -198,12 +196,12 @@ public class LoadStartupConfigForm : Form
 
         // Permitted Actions Panel
         CPHLogger.LogC("Creating _permittedActionsSection");
-        _permittedActionsSection = new ActionsPanel("Permitted Actions", new List<ActionConfig>());
+        _permittedActionsSection = new SelectActionsPanel("Permitted Actions", new List<ActionConfig>());
         coreLayoutPanelForForm.Controls.Add(_permittedActionsSection, 0, 3);
         
         // Blocked Actions Panel
         CPHLogger.LogC("Creating _blockedActionsSection");
-        _blockedActionsSection = new ActionsPanel("Blocked Actions", new List<ActionConfig>());
+        _blockedActionsSection = new SelectActionsPanel("Blocked Actions", new List<ActionConfig>());
         coreLayoutPanelForForm.Controls.Add(_blockedActionsSection, 0, 4);
         
         // Startup Behavior Control Panel
@@ -308,15 +306,15 @@ public class UserConfigurationPanel : BaseConfigurationPanel
     }
 }
 
-public class ApplicationsPanel : SelectItemsPanel
+public class SelectApplicationsPanel : SelectItemsPanel
 {
     private readonly Button _addPathBtn; // Button to add application paths
     /// <summary>
-    /// Initializes the ApplicationsPanel with a section title and a list of applications.
+    /// Initializes the SelectApplicationsPanel with a section title and a list of applications.
     /// </summary>
     /// <param name = "sectionTitle">Title of the panel.</param>
     /// <param name = "applications">List of applications to populate the panel.</param>
-    public ApplicationsPanel(string sectionTitle, List<ApplicationDetails> applications) : base(sectionTitle, applications?.Select(app => $"{app.FileName} ({app.Index})").ToList() ?? new List<string>(), rows: 2, cols: 2)
+    public SelectApplicationsPanel(string sectionTitle, List<ApplicationDetails> applications) : base(sectionTitle, applications?.Select(app => $"{app.FileName} ({app.Index})").ToList() ?? new List<string>(), rows: 2, cols: 2)
     {
         if (applications == null) 
         {
@@ -324,7 +322,7 @@ public class ApplicationsPanel : SelectItemsPanel
             CPHLogger.LogW("Applications list was null. Initialized with an empty list.");
         }
 
-        CPHLogger.LogC("[S]ApplicationsPanel: Setting Layout");
+        CPHLogger.LogC("[S]SelectApplicationsPanel: Setting Layout");
         ConfigureButtonPanel(flowDirection: FlowDirection.LeftToRight, wrapContents: false, autoSize: true, anchor: AnchorStyles.Top | AnchorStyles.Left);
         // Update TableLayoutPanel row/column styles
         _layoutTable.RowStyles.Clear();
@@ -339,7 +337,7 @@ public class ApplicationsPanel : SelectItemsPanel
         _layoutTable.SetRowSpan(_itemsListBox, 1);
         
         // Initialize Add Path button
-        CPHLogger.LogC("[S]ApplicationsPanel - Creating Add Path button");
+        CPHLogger.LogC("[S]SelectApplicationsPanel - Creating Add Path button");
         _addPathBtn = UIComponentFactory.CreateButton("Add Path", Constants.ButtonStyle.Longer, OnAddPathAction);
         
         // Clear default button panel and re-add buttons
@@ -353,20 +351,8 @@ public class ApplicationsPanel : SelectItemsPanel
         
         // Add navigation panel to the second row, second column
         _layoutTable.Controls.Add(_navigationPanel, 1, 1);
-        CPHLogger.LogC("[E]ApplicationsPanel: Layout updated successfully");
+        CPHLogger.LogC("[E]SelectApplicationsPanel: Layout updated successfully");
     }
-  
-    public List<ApplicationDetails> GetApplicationList()
-    {
-        var applicationList = new List<ApplicationDetails>();
-        foreach (var item in _itemsListBox.Items)
-        {
-            applicationList.Add(new ApplicationDetails(item.ToString(), applicationList.Count + 1));
-        }
-        return applicationList;
-    }
-
-
 
     /*
     ** Method: OnAddPathAction
@@ -453,14 +439,14 @@ public class ApplicationsPanel : SelectItemsPanel
     }
 }
 
-public class ActionsPanel : SelectItemsPanel
+public class SelectActionsPanel : SelectItemsPanel
 {
     /// <summary>
-    /// Initializes a new instance of the ActionsPanel class.
+    /// Initializes a new instance of the SelectActionsPanel class.
     /// </summary>
     /// <param name = "sectionTitle">The title displayed on the panel (e.g., "Permitted Actions").</param>
     /// <param name = "actions">A list of actions to populate the ListBox with.</param>
-    public ActionsPanel(string sectionTitle, List<ActionConfig> actions) // Calls the base class constructor (SelectItemsPanel) to initialize shared components.
+    public SelectActionsPanel(string sectionTitle, List<ActionConfig> actions) // Calls the base class constructor (SelectItemsPanel) to initialize shared components.
     // Converts the list of ActionData objects to a list of their names (strings) for display.
     : base(sectionTitle, actions?.Select(actions => $"{actions.Name} ({actions.Order})").ToList() ?? new List<string>(), rows: 2, cols: 2)
     {
@@ -486,23 +472,10 @@ public class ActionsPanel : SelectItemsPanel
         _layoutTable.Controls.Add(_buttonPanel, 0, 1);
         // Add navigation panel to the second row, second column
         _layoutTable.Controls.Add(_navigationPanel, 1, 1);
-        CPHLogger.LogC("[E]ApplicationsPanel: Layout updated successfully");
+        CPHLogger.LogC("[E]SelectApplicationsPanel: Layout updated successfully");
     }
 
-    public List<ActionConfig> GetActionList()
-    {
-        var actionList = new List<ActionConfig>();
-        foreach (var item in _itemsListBox.Items)
-        {
-            actionList.Add(new ActionConfig
-            {
-                Name = item.ToString(),
-                IsEnabled = true,
-                Order = actionList.Count + 1
-            });
-        }
-        return actionList;
-    }
+
 
 
 
@@ -603,17 +576,6 @@ public class StartupBehaviorControlPanel : BaseConfigurationPanel
         CPHLogger.LogC($"[E]StartupBehaviorControlPanel: {_sectionTitle} Initialized successfully");
     }
 
-    public StartupBehavior GetStartupBehavior()
-    {
-        return new StartupBehavior
-        {
-            AutoLaunch = _startupOptionComboBox.SelectedItem.ToString(),
-            Delay = (int)_delayNumericUpDown.Value,
-            Blocking = _blockingOptionComboBox.SelectedItem.ToString()
-        };
-    }
-
-
     /// <summary>
     /// Handles changes in the Startup dropdown.
     /// </summary>
@@ -656,12 +618,6 @@ public class FormsControlPanel : BaseConfigurationPanel
     private TableLayoutPanel _mainLayoutPanel; // Main layout to centralize the flow control panel
     private FlowLayoutPanel _flowControlButtonPanel; // Holds Save and Close buttons
 
-    private ApplicationsPanel _startupApplicationsSection;
-    private StartupBehaviorControlPanel _startupBehaviorApplicationsPanel;
-    private ActionsPanel _permittedActionsSection;
-    private ActionsPanel _blockedActionsSection;
-    private StartupBehaviorControlPanel _startupBehaviorActionsPanel;
-
     /// <summary>
     /// Initializes the FormsControlPanel with centralized Save and Close buttons.
     /// </summary>
@@ -698,7 +654,7 @@ public class FormsControlPanel : BaseConfigurationPanel
         var saveButton = UIComponentFactory.CreateButton(
             "Save",
             Constants.ButtonStyle.FlowControl,
-            (s, e) => OnSaveSettings()
+            (s, e) => MessageBox.Show("Configuration Saved!")
         );
 
         // Add Close Button
@@ -722,131 +678,6 @@ public class FormsControlPanel : BaseConfigurationPanel
         Controls.Add(_mainLayoutPanel);
 
         CPHLogger.LogC("[E] FormsControlPanel: Successfully Initialized with TableLayoutPanel & FlowLayoutPanel");
-    }
-
-
-    /*
-    ** Method: OnSaveSettings
-    ** Description:
-    ** Collects UI data, prepares optimized configuration, and saves combined JSON.
-    */
-    private void OnSaveSettings()
-    {
-        try
-        {
-            CPHLogger.LogI("Collecting configuration data from UI panels...");
-
-            var config = new SBZenStartupConfig
-            {
-            StartupApplications = _startupApplicationsSection?.GetApplicationList() ?? new List<ApplicationDetails>(),
-            ApplicationsSettings = _startupBehaviorApplicationsPanel?.GetStartupBehavior() ?? new StartupBehavior(),
-            Actions = new ActionsConfig
-            {
-                Enabled = _permittedActionsSection?.GetActionList() ?? new List<ActionConfig>(),
-                Blocked = _blockedActionsSection?.GetActionList() ?? new List<ActionConfig>(),
-                Settings = _startupBehaviorActionsPanel?.GetStartupBehavior() ?? new StartupBehavior()
-            },
-            };
-
-            ConfigurationManager.SaveConfiguration(config);
-            CPHLogger.LogI("Optimized configuration and metadata saved successfully.");
-        }
-        catch (Exception ex)
-        {
-            CPHLogger.LogE($"Error while saving optimized configuration: {ex.Message}\n{ex.StackTrace}");
-        }
-    }
-
-
-}
-
-public static class ConfigurationManager
-{
-    public static void SaveConfiguration(object config)
-    {
-        try
-        {
-            // Ensure the directory exists
-            string directoryPath = Path.GetDirectoryName(Constants.ConfigFilePath);
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
-
-
-            // Save main configuration
-            CPHLogger.LogI("Starting configuration serialization...");
-            var mainJsonString = JsonSerializer.Serialize(new
-            {
-                SBZen_StartupConfig = new
-                {
-                    Metadata = new
-                    {
-                        GlobalConfigName = Constants.SBGlobalStore,
-                        SavePath = Constants.ConfigFilePath,
-                        ApplicationVersion = Constants.ApplicationVersion,
-                        SaveTimestamp = DateTime.UtcNow.ToString(Constants.SaveTimestampFormat),
-                        Environment = new
-                        {
-                            OS = Environment.OSVersion.ToString(),
-                            Architecture = Environment.Is64BitOperatingSystem ? "x64" : "x86",
-                            LastUpdatedBy = Environment.UserName
-                        }
-                    },
-                    StartupConfig = new
-                    {
-                        ConfigRevision = 1,
-                        StartupApplications = ((SBZenStartupConfig)config).StartupApplications,
-                        ApplicationsSettings = ((SBZenStartupConfig)config).ApplicationsSettings,
-                        PermittedActions = new
-                        {
-                            Enabled = ((SBZenStartupConfig)config).EnabledActions
-                        },
-                        BlockedActions = new
-                        {
-                            Blocked = ((SBZenStartupConfig)config).BlockedActions
-                        },
-                        ActionSettings = ((SBZenStartupConfig)config).ActionsSettings
-                    }
-                }
-            }, new JsonSerializerOptions { WriteIndented = true });
-            CPHLogger.LogI("Configuration serialization completed.");
-            CPHLogger.LogI($"Serialized JSON: {mainJsonString}");
-
-            // Log the contents of applications and actions
-            var configData = (SBZenStartupConfig)config;
-            CPHLogger.LogI("Logging Startup Applications:");
-            foreach (var app in configData.StartupApplications)
-            {
-                CPHLogger.LogI($"Application: {app.FileName}, Path: {app.FullPath}, Index: {app.Index}");
-            }
-
-            CPHLogger.LogI("Logging Enabled Actions:");
-            foreach (var action in configData.EnabledActions)
-            {
-                CPHLogger.LogI($"Action: {action.Name}, Enabled: {action.IsEnabled}, Order: {action.Order}");
-            }
-
-            CPHLogger.LogI("Logging Blocked Actions:");
-            foreach (var action in configData.BlockedActions)
-            {
-                CPHLogger.LogI($"Action: {action.Name}, Enabled: {action.IsEnabled}, Order: {action.Order}");
-            }
-
-            CPHLogger.LogI("Logging Application Settings:");
-            CPHLogger.LogI($"AutoLaunch: {configData.ApplicationsSettings.AutoLaunch}, Delay: {configData.ApplicationsSettings.Delay}, Blocking: {configData.ApplicationsSettings.Blocking}");
-
-            CPHLogger.LogI("Logging Action Settings:");
-            CPHLogger.LogI($"AutoLaunch: {configData.ActionsSettings.AutoLaunch}, Delay: {configData.ActionsSettings.Delay}, Blocking: {configData.ActionsSettings.Blocking}");
-
-            // Write to the main configuration file
-            File.WriteAllText(Constants.ConfigFilePath, mainJsonString);
-            CPHLogger.LogI($"Configuration saved to {Constants.ConfigFilePath}");
-        }
-        catch (Exception ex)
-        {
-            CPHLogger.LogE($"Failed to save configuration: {ex.Message}\n{ex.StackTrace}");
-        }
     }
 }
 
@@ -1347,6 +1178,11 @@ public class ApplicationDetails
         FileName = Path.GetFileName(fullPath);
         Index = index;
     }
+
+    public override string ToString()
+    {
+        return FileName;
+    }
 }
 
 public class LoadOnStartupConfig
@@ -1363,11 +1199,10 @@ public class ApplicationConfig
     public int Order { get; set; }
 }
 
-public class ActionsConfig
+public class ActionConfigs
 {
-    public List<ActionConfig> Enabled { get; set; } = new List<ActionConfig>();
-    public List<ActionConfig> Blocked { get; set; } = new List<ActionConfig>();
-    public StartupBehavior Settings { get; set; } = new StartupBehavior();
+    public List<ActionConfig> Permitted { get; set; }
+    public List<ActionConfig> Blocked { get; set; }
 }
 
 public class ActionConfig
@@ -1382,7 +1217,7 @@ public class UserSettingsConfig
     public bool ResetConfig { get; set; }
     public ExportImportConfig ExportSettings { get; set; }
     public ExportImportConfig ImportSettings { get; set; }
-    public string LastSaveTime { get; set; }
+    public DateTime LastSaveTime { get; set; }
 }
 
 public class ExportImportConfig
@@ -1392,31 +1227,11 @@ public class ExportImportConfig
 
 public static class Constants
 {
-    // System Strings.
-    public const string SBGlobalStore = "SBZenConfig_Startup";
-
-    // Configuration file details
-    public const string ConfigFileName = "config.json";
-    public static readonly string SBZenDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "SBZen");
-    public static readonly string ConfigFilePath = Path.Combine(SBZenDir, ConfigFileName);
-
-    public const string ApplicationVersion = "1.0.0";
-    public const string SaveTimestampFormat = "o"; // ISO 8601 format
-
-    // UI Constants
-    public const string FormName = "SBZen Config Manager";
-    public const int DefaultDelay = 2;
-    public const int MaxDelay = 15;
-    public const int NumericControlWidth = 40;
-
-    // Logger Messages
-    public const string Error_WindowHandleInvalid = "Main window handle is invalid. Streamer.bot is either not running, or running headlessly.";
-    public const string Error_WindowRectFailed = "Failed to retrieve the window rectangle. Error code: {0}";
-    public const string Log_WindowRect = "Streamer.bot Window Rect: {0}";
-    public const string Log_TargetMonitor = "Target Monitor: {0}, Bounds: {1}";    
-
-    // Constraints
+    // Strings.
+    public static readonly string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
     public const string ExecutableFilter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
+    public const string SettingsFileName = "settings.json";
+    public const string FormName = "SBZen Config Manager";
 
     //Colours
     public static readonly Color FormColour = ColorTranslator.FromHtml("#151515");
@@ -1431,7 +1246,7 @@ public static class Constants
     public static readonly Color PrimaryBtnText = ColorTranslator.FromHtml("#FFFFFF");
     
     //Enums    
-    public enum StartupMode 
+    public enum StartupMode
     {
         Yes,
         No,
@@ -1949,24 +1764,6 @@ public class ActionManagerForm : Form
         if (action != null)
             action.Enabled = false;
     }
-}
-
-public class SBZenStartupConfig
-{
-    public List<ApplicationDetails> StartupApplications { get; set; } = new List<ApplicationDetails>();
-    public StartupBehavior ApplicationsSettings { get; set; } = new StartupBehavior();
-    public List<ActionConfig> EnabledActions { get; set; } = new List<ActionConfig>();
-    public List<ActionConfig> BlockedActions { get; set; } = new List<ActionConfig>();
-    public ActionsConfig Actions { get; set; } = new ActionsConfig();
-    public StartupBehavior ActionsSettings { get; set; } = new StartupBehavior();
-
-}
-
-public class StartupBehavior
-{
-    public string AutoLaunch { get; set; } = "Prompt";
-    public int Delay { get; set; } = 0;
-    public string Blocking { get; set; } = "No";
 }
 
 public class BaseConfigurationPanel : UserControl
